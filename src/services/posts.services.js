@@ -1,12 +1,17 @@
-const { get_jwt_token } = require('./auth/utils/jwt')
-const { get_user_by_query, get_users_by_query, remove_post_from_saved } = require('../db/users.db')
-const { upload_image, delete_file } = require("./aws.services")
-const { get_posts_by_query, get_post_by_query, create_new_post, delete_post_by_id } = require('../db/posts')
-const { get_profile } = require('./profile.services')
+const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
+const { deleteFile } = require("./aws.services")
+const { getPostByQuery, getPostsByQuery, createNewPost, deletePostById } = require('../db/posts')
+const { addPostToSaved, removePostFromSaved } = require('../db/profile')
+
+const { uploadImage } = require('./aws.services')
+
 const { ObjectId } = require('mongodb');
+const mongoose = require('mongoose')
+
 const NotFoundError = require('../errors/NotFoundError')
-const ForbiddenError = require('../errors/ForbiddenError')
-const AppError = require('../errors/AppError')
+const AppError = require('../errors/AppError');
+const UnAuthorizedError = require('../errors/UnAuthorizedError');
+const ConflictError = require('../errors/ConflictError');
 
 async function createPost({
     title,
@@ -16,7 +21,7 @@ async function createPost({
     profile
 }) {
     if(!profile || !title || !content_text || !category) {
-        throw new AppError("Missing required fields!")
+        throw new AppError({ message: "Missing required fields!" })
     }
     
     var img_url = null
@@ -24,10 +29,10 @@ async function createPost({
     if(featured_image) {
         if(featured_image.size !== 0){
 
-            const image_upload_result = await upload_image(featured_image, "featured_image", Date.now().toString())
+            const image_upload_result = await uploadImage(featured_image, "featured_image", Date.now().toString())
             
             if(!image_upload_result.status) {
-                throw new AppError("Error to upload image to storage!")
+                throw new AppError({ message: "Error to upload image to storage!" })
             }
             else {
                 img_url = image_upload_result.data.url
@@ -35,7 +40,7 @@ async function createPost({
         }
     }
         
-    const post_creating_result = await create_new_post(title, content_text, category, profile._id, img_url)
+    const post_creating_result = await createNewPost(title, content_text, category, profile._id, img_url)
 
     global.Logger.log({
         type: "create_post",
@@ -53,25 +58,32 @@ async function createPost({
     }
 }
 
-async function _insert_author_to_post(post) {
+async function insertAuthorToPost(post) {
+    if(!post) {
+        throw new AppError({ message: "Post is required to insert author!" })
+    }
+
     post = post.toObject()
     
-    let author = await get_user_by_query({ '_id': post.author })
+    let author = await getUserByQuery({ '_id': post.author })
     if(author.status) post.author = author.data
 
     return post
 }
 
 async function getPosts(params, expand) {
-    const posts = await get_posts_by_query(params)
+    if(!params) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+    const posts = await getPostsByQuery(params)
 
     if(!posts.status) {
-        throw new NotFoundError("Posts not found!")
+        throw new NotFoundError({ message: "Posts not found!" })
     }
 
     if(expand === "author") {
         for (let i = 0; i < posts.data.length; i++) {
-            posts.data[i] = await _insert_author_to_post(posts.data[i])
+            posts.data[i] = await insertAuthorToPost(posts.data[i])
         }
     }
     
@@ -83,15 +95,18 @@ async function getPosts(params, expand) {
 }
 
 async function getPostById(id, expand) {
-    
-    const post = await get_post_by_query({ "_id": id })
+    if(!id) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+
+    const post = await getPostByQuery({ "_id": id })
 
     if(!post.status) {
-        throw new NotFoundError("Post not found!")
+        throw new NotFoundError({ message: "Post not found!" })
     }
 
     if(expand === "author") {
-        post.data = await _insert_author_to_post(post.data)
+        post.data = await insertAuthorToPost(post.data)
     }
     
     return {
@@ -101,94 +116,119 @@ async function getPostById(id, expand) {
     }
 }
 
-async function deletePost(req) {
-    fields = [{
-            type: "token",
-            value:  req?.headers?.authorization?.split(' ')[1],
-            source:  "Authorization"
-        },
-        {
-            type: "_id",
-            value:  req?.params?.id,
-            source:  "params"
-        }
-    ]
-
-    const validation = await field_validation(fields)
-    
-    if(!validation.status) {
-        return {
-            status: false,
-            message: "Some errors in your fields",
-            errors: validation.errors,
-            code: validation.errors.Authorization ? 403 : 400
-        }
+async function deletePost(id) {
+    if(!id) {
+        throw new AppError({ message: "Missing required fields!" })
     }
 
-    const token_result = await get_jwt_token((req.headers['authorization'])?.split(' ')[1])
-
-    const user = await get_user_by_query({ "_id": token_result.data })
-
-    if(!user.status) {
-        return {
-            status: false,
-            message: "Unauthorized!",
-            data: null,
-            code: 401
-        }
-    }
-
-    if(!user.data.is_admin) {
-        return {
-            status: false,
-            message: "This user doesn`t has permission to delete posts!",
-            data: null,
-            code: 403
-        }
-    }
-
-    const result = await delete_post_by_id(req.params.id)
+    const result = await deletePostById(id)
 
     if(!result.status) {
-        return {
-            ...result,
-            code: 404
-        }
+        throw new NotFoundError({ message: "Post not found!" })
     }
 
-    let users_with_saved_post = await get_users_by_query({ saved_posts: new ObjectId(req.params.id) }) 
+    let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) }) 
 
     if(users_with_saved_post.status) {
         for (const target_user of users_with_saved_post.data) {
-            const result = await remove_post_from_saved(target_user._id, req.params.id)
+            const result = await removePostFromSaved(target_user._id, id)
+
             if(!result.status) {
                 global.Logger.log({
                     type: "error",
                     message: "Error to remove post from saved",
                     data: {
-                        user_who_deletes_post: user.data._id,
+                        user_who_deletes_post: profile._id,
                         target_user: target_user._id,
-                        post_id: new ObjectId(req.params.id)
+                        post_id: new ObjectId(id)
                     }
                 })
             }
         }
     }
 
-    await delete_file(result.data.featured_image ?? "")
+    await deleteFile(result.data.featured_image ?? "")
 
     global.Logger.log({
         type: "delete_post",
-        message: `User ${user.data.nick_name} deleted post`,
+        message: `Post has been deleted`,
         data: {
-            user: user.data._id,
-            post_id: new ObjectId(req.params.id)
+            post_id: new ObjectId(id)
         }
     })
 
     return {
-        ...result,
-        code: 200
+        status: true,
+        message: "Success deleted post",
+        data: result.data
+    }
+}
+
+async function savePost(profile, id) {
+    if(!profile || !id) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+
+    if(!(await getPostByQuery({ "_id": id })).status) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+    
+    if(profile.saved_posts.some((p) => String(p) === id )) {
+        throw new ConflictError({ message: "Post is already in saved posts!" })
+    }
+
+    const result =  await addPostToSaved(profile._id, id) 
+
+    global.Logger.log({
+        type: "save_post",
+        message: `User ${result.data.nick_name} saved post ${id}`,
+        data: {
+            user: result.data._id,
+            post_id: new mongoose.Types.ObjectId(id)
+        }
+    })
+    
+    return {
+        status: true,
+        message: "Success saved post",
+        data: {
+            saved_posts: result.data.saved_posts
+        }
+    }
+}
+
+async function unsavePost(profile, id) {
+    const user = await getUserByQuery({ "_id": profile._id }, { with_saved_posts: true })
+
+    if(!user.status) {
+        throw new UnAuthorizedError()
+    }
+
+    if(!(await getPostByQuery({ "_id": id })).status) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+
+    if(!user.data.saved_posts.some((p) => String(p) === id )) {
+        throw new ConflictError({ message: "Post is not in saved posts!" })
+    }
+
+    const result = await removePostFromSaved(user.data._id, id)
+
+    global.Logger.log({ 
+        type: "unsave_post",
+        message: `User ${result.data.nick_name} unsaved post ${id}`,
+        data: {
+            user: result.data._id,
+            post_id: new mongoose.Types.ObjectId(id)
+        }
+    })
+
+    return {
+        status: true,
+        message: "Success unsaved post",
+        data: {
+            saved_posts: result.data.saved_posts
+        }
     }
 }
 
@@ -196,5 +236,7 @@ module.exports = {
     getPosts,
     getPostById,
     createPost,
-    delete_post
+    deletePost,
+    savePost,
+    unsavePost
 }

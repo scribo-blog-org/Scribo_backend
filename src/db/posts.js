@@ -1,6 +1,6 @@
 const Post = require('../models/Post')
 
-async function get_posts_by_query(query = {}) {
+async function getPostsByQuery(query = {}) {
     const posts = await Post.find(query)
     
     if (!posts.length) {
@@ -18,7 +18,7 @@ async function get_posts_by_query(query = {}) {
     }
 }
 
-async function get_post_by_query(query = {}) {
+async function getPostByQuery(query = {}) {
     const post = await Post.findOne(query)
     
     if (!post) {
@@ -36,7 +36,7 @@ async function get_post_by_query(query = {}) {
     }
 }
 
-async function create_new_post(title, content_text, category, author, featured_image=null) {
+async function createNewPost(title, content_text, category, author, featured_image=null) {
     const new_post = await Post.create({
         author: author,
         title: title,
@@ -52,7 +52,7 @@ async function create_new_post(title, content_text, category, author, featured_i
     }
 }
 
-async function delete_post_by_id(id) {
+async function deletePostById(id) {
     const deleted_post = await Post.findByIdAndDelete(id);
 
     if(!deleted_post) {
@@ -71,8 +71,8 @@ async function delete_post_by_id(id) {
 }
 
 module.exports = {
-    get_posts_by_query,
-    get_post_by_query,
-    create_new_post,
-    delete_post_by_id
+    getPostsByQuery,
+    getPostByQuery,
+    createNewPost,
+    deletePostById
 }

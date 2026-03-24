@@ -207,7 +207,7 @@ const validateMiddleware = (fields) => {
 
         if (!validation.status) {
             return next(
-                new BadRequestError('Some errors in your fields', validation.errors)
+                new BadRequestError({ errors: validation.errors })
             );
         }
 

@@ -1,8 +1,8 @@
-const deletePost = require('../../services/posts.services')
+const { deletePost } = require('../../services/posts.services')
 
 const deletePostController = async (req, res, next) => {
     try {
-        const result = await deletePost(req)
+        const result = await deletePost(req.params.id)
 
         res.status(200).json(result)
     }

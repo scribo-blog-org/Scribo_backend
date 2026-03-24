@@ -1,122 +1,34 @@
 const { Router } = require('express')
-const { get_profile, update_profile, save_post, unsave_post, read_notifications } = require('../services/profile.services')
-const multer = require('multer');
 const router = Router();
 
-const upload = multer({
-    limits: { fieldSize: 5 * 1024 * 1024 }
-})
+const authMiddleware = require('../middlewares/auth.middleware')
+const uploadMiddleware = require('../middlewares/upload.middleware')
+const validationMiddleware = require('../middlewares/validation/validate.middleware')
 
-router.get('/', async (req, res) => {
-    try {
-        const user = await get_profile(req)
+const { updateProfileSchema } = require('../middlewares/validation/schemes')
 
-        res.status(user.code)
+const getProfileController = require('../controllers/profile/getProfile.controller')
+const updateProfileController = require('../controllers/profile/updateProfile.controller')
+const readNotificationsController = require('../controllers/profile/readNotification.controller')
 
-        delete user.code
+router.get(
+    '/',
+    authMiddleware,
+    getProfileController
+)
 
-        res.json(user)
-    }
-    catch(e) {
-        console.log(e)
+router.patch(
+    '/',
+    authMiddleware,
+    uploadMiddleware(["avatar"]),
+    validationMiddleware(updateProfileSchema),
+    updateProfileController
+)
 
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
-
-router.patch('/', (req, res) => {
-    upload.single('avatar')(req, res, async (err) => {
-        if (err instanceof multer.MulterError) {
-            req.file = null
-        }
-        try {
-            const result = await update_profile(req)
-
-            res.status(result.code)
-
-            delete result.code
-
-            res.json(result)
-        }
-        catch(e) {
-            console.log(e)
-
-            res.status(500).json({
-                status: false,
-                message: "Internal server error",
-                data: null
-            })
-        }
-    })
-})
-
-router.post('/save-post/:id', async (req, res) => {
-    try {
-        const result = await save_post(req)
-        
-        res.status(result.code)
-
-        delete result.code
-
-        res.json(result)
-    }
-    catch(e) {
-        console.log(e)
-
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
-
-router.delete('/save-post/:id', async (req, res) => {
-    try {
-        const result = await unsave_post(req)
-        
-        res.status(result.code)
-
-        delete result.code
-
-        res.json(result)
-    }
-    catch(e) {
-        console.log(e)
-
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
-
-router.patch('/read-notifications', async(req, res) => {
-    try {
-        const result = await read_notifications(req)
-
-        res.status(result.code)
-
-        delete result.code
-
-        res.json(result)
-    }
-    catch(e) {
-        console.log(e)
-
-        const result_data = {
-            status: false,
-            message: "Internal server error!",
-            data: null
-        }
-
-        res.status(500).json(result_data)
-    }
-})
+router.patch(
+    '/notifications',
+    authMiddleware,
+    readNotificationsController
+)
 
 module.exports = router;

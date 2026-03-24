@@ -1,90 +1,44 @@
 const { Router } = require('express')
-const { get_user, get_users, follow, unfollow } = require('../services/users.services')
-
 const router = Router()
 
-router.get('/:nick_name', async (req, res) => {
-    try {
-        const user = await get_user(req)
-        
-        res.status(user.code)
+const {
+    getUserByNickNameSchema,
+    getUsersSchema,
+    followSchema
+} = require("../middlewares/validation/schemes")
 
-        delete user.code
+const validateMiddleware = require('../middlewares/validation/validate.middleware')
+const authMiddleware = require('../middlewares/auth.middleware')
 
-        res.json(user)
-    }
-    catch(e) {
-        console.log(e)
+const getUserByNickNameController = require("../controllers/users/getUserByNickName.controller")
+const getUsersController = require("../controllers/users/getUsers.controller")
+const followController = require("../controllers/users/follow.controller")
+const unfollowController = require("../controllers/users/unfollow.controller")
 
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
+router.get(
+    '/:nick_name',
+    validateMiddleware(getUserByNickNameSchema),
+    getUserByNickNameController
+)
 
-router.get('/', async (req, res) => {
-    try {
-        const users = await get_users(req)
+router.get(
+    '/',
+    validateMiddleware(getUsersSchema),
+    getUsersController
+)
 
-        res.status(users.code)
+router.post(
+    '/:id/follow',
+    authMiddleware,
+    validateMiddleware(followSchema),
+    followController
+)
 
-        delete users.code
-
-        res.json(users)
-    }
-    catch (e) {
-        console.log(e)
-
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
-
-router.post('/:id/follow', async (req, res) => {
-    try {
-        const user = await follow(req)
-
-        res.status(user.code)
-
-        delete user.code
-
-        res.json(user)
-    }
-    catch(e) {
-        console.log(e)
-
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
-
-router.delete('/:id/follow', async (req, res) => {
-    try {
-        const user = await unfollow(req)
-        
-        res.status(user.code)
-        
-        delete user.code
-
-        res.json(user)
-    }
-    catch(e) {
-        console.log(e)
-
-        res.status(500).json({
-            status: false,
-            message: "Internal server error",
-            data: null
-        })
-    }
-})
+router.delete(
+    '/:id/follow',
+    authMiddleware,
+    validateMiddleware(followSchema),
+    unfollowController
+)
 
 module.exports = router

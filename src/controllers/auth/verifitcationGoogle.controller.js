@@ -1,4 +1,4 @@
-const verifyGoogleToken = require("../../services/auth/verification.service")
+const { verifyGoogleToken } = require("../../services/auth/verification.service")
 
 const verificationGoogleController = async (req, res, next) => {
     try {

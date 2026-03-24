@@ -1,9 +1,8 @@
 const AppError = require("./AppError")
 
 class ForbiddenError extends AppError {
-    constructor(message = "Permission denied") {
-        super(message, null, 403, true);
-        this.name = this.constructor.name;
+    constructor({ message = "You don't have permission to perform this action!", errors = null } = {}) {
+        super({ message, errors, status: 403, isOperational: true });
     }
 }
 

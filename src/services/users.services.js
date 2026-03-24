@@ -1,125 +1,66 @@
-const User = require('../models/User')
-const { get_user_by_query, get_users_by_query, follow_to_user_by_id, unfollow_to_user_by_id } = require('../db/users.db')
-const { add_notification_to_user_by_id } = require('../db/profile')
-const { get_profile } = require('./profile.services')
+const { getUserByQuery, followToUserById, unfollowToUserById , getUsersByQuery } = require('../db/users.db')
+const { addNotificationToUserById } = require('../db/profile')
+const AppError = require('../errors/AppError')
+const NotFoundError = require('../errors/NotFoundError')
+const ConflictError = require('../errors/ConflictError')
 
-async function get_user(req){
-    const validation = await field_validation([ { type: "nick_name", value: req.params.nick_name, source: "params" } ])
-
-    if(!validation.status) {
-        return {
-            status: false,
-            message: "Some errors in your fields",
-            data: null,
-            errors: validation.errors,
-            code: 400
-        }
+async function getUserByNickName(nickName){
+    if(!nickName) {
+        throw new AppError({ message: "Nick name is required" })
     }
 
-    const user = await get_user_by_query({ "nick_name": req.params.nick_name })
+    const user = await getUserByQuery({ "nick_name": nickName })
 
-    return { ...user, code: user.status ? 200 : 404 }
+    if(!user.status) {
+        throw new NotFoundError({ message: "User not found" })
+    }
+
+    return {
+        status: true,
+        message: "User found",
+        data: user.data
+    }
 }
 
-async function get_users(req){
-    const params = req.query;
-
-    const fields = Object.keys(params).flatMap(key => {
-        const value = params[key];
-
-        if (Array.isArray(value)) {
-            return value.map(v => ({
-                type: key,
-                value: v,
-                source: "params"
-            }));
-            }
-        return [{
-            type: key,
-            value,
-            source: "params"
-        }];
-    });
-
-    const validation = await field_validation(fields)
-
-    if(!validation.status) {
-        return {
-            status: false,
-            message: "Some errors in your fields",
-            data: null,
-            errors: validation.errors,
-            code: 400
-        }
+async function getUsers(params){
+    if(!params) {
+        throw new AppError({ message: "Query parameters are required" })
     }
 
-    const users = await get_users_by_query(params)
+    const users = await getUsersByQuery(params)
     
-    return { ...users, code: users.status ? 200 : 404 }
+    if(!users.status) {
+        throw new NotFoundError({ message: "Users not found" })
+    }
+
+    return {
+        status: true,
+        message: "Users found",
+        data: users.data
+    }
 }
 
-async function follow(req) {
-    const id = req.params["id"]
-    const token = req?.headers?.authorization?.split(' ')?.[1]
-    fields = [
-        {
-            type: "token",
-            value: token,
-            source: "Authorization"
-        },
-        {
-            type: "id",
-            value: id,
-            source: "params"
-        },
-    ]
-    
-    const validation = await field_validation(fields)
-
-    if(!validation.status) {
-        return {
-            status: false, 
-            message: "Some errors in your fields!",
-            data: null,
-            errors: validation.errors,
-            code: validation.errors["Authorization"] ? 401 : 400
-        }
+async function follow(userId, profile) {
+    if(!userId || !profile) {
+        throw new AppError({ message: "User id and profile are required" })
     }
-    
-    let profile = await get_profile(req)
 
-    if(!profile.status) return profile
-
-    let followed_user = await get_user_by_query({ "_id": id })
-
+    let followed_user = await getUserByQuery({ "_id": userId })
     if(!followed_user.status) {
-        return {
-            ...followed_user,
-            code: 404
-        }
+        throw new NotFoundError({ message: "User not found" })
     }
     
-    if(profile.data.follows.some(item => item._id.equals(followed_user.data._id))) {
-        return {
-            status: false,
-            message: "You are already following this user!",
-            data: null,
-            code: 409
-        }
+    if(profile.follows.some(item => item._id.equals(followed_user.data._id))) {
+        throw new ConflictError({ message: "You are already following this user!" })
     }
 
-    if(profile.data._id.equals(followed_user.data._id)) {
-        return {
-            status: false,
-            message: "You cannot follow yourself!",
-            data: null,
-            code: 409
-        }
+    if(profile._id.equals(followed_user.data._id)) {
+        throw new ConflictError({ message: "You cannot follow yourself!" })
     }
 
-    const notification = await add_notification_to_user_by_id(followed_user.data._id, { type: "follow", user: profile.data._id })
+    await addNotificationToUserById(followed_user.data._id, { type: "follow", user: profile._id })
     
-    const follow = await follow_to_user_by_id(profile.data._id, followed_user.data._id)
+    const follow = await followToUserById(profile._id, followed_user.data._id)
 
     global.Logger.log({
         type: "follow",
@@ -146,74 +87,32 @@ async function follow(req) {
                 follows: follow.data.followed.follows,
                 followers: follow.data.followed.followers
             }  
-        },
-        code: 200
+        }
     }
 }
 
-async function unfollow(req) {
-    const id = req.params["id"]
-    const token = req?.headers?.authorization?.split(' ')?.[1]
-    
-    fields = [
-        {
-            type: "token",
-            value: token,
-            source: "Authorization"
-        },
-        {
-            type: "id",
-            value: id,
-            source: "params"
-        },
-    ]
-    
-    const validation = await field_validation(fields)
-
-    if(!validation.status) {
-        return {
-            status: false, 
-            message: "Some errors in your fields!",
-            data: null,
-            errors: validation.errors,
-            code: 401
-        }
+async function unfollow(userId, profile) {
+    if(!userId || !profile) {
+        throw new AppError({ message: "User id and profile are required" })
     }
-    
-    let profile = await get_profile(req)
 
-    if(!profile.status) return profile
-
-    let followed_user = await get_user_by_query({ "_id": id })
+    let followed_user = await getUserByQuery({ "_id": userId })
 
     if(!followed_user.status) {
-        return {
-            ...followed_user,
-            code: 404
-        }
+        throw new NotFoundError({ message: "User not found" })
     }
     
-    if(profile.data._id.equals(followed_user.data._id)) {
-        return {
-            status: false,
-            message: "You cannot unfollow yourself!",
-            data: null,
-            code: 409
-        }
+    if(profile._id.equals(followed_user.data._id)) {
+        throw new ConflictError({ message: "You cannot unfollow yourself!" })
     }
 
-    if(!profile.data.follows.some(item => item._id.equals(followed_user.data._id))) {
-        return {
-            status: false,
-            message: "You are not following this user!",
-            data: null,
-            code: 409
-        }
+    if(!profile.follows.some(item => item._id.equals(followed_user.data._id))) {
+        throw new ConflictError({ message: "You are not following this user!" })
     }
 
-    const notification = await add_notification_to_user_by_id(followed_user.data._id, { type: "unfollow", user: profile.data._id })
+    await addNotificationToUserById(followed_user.data._id, { type: "unfollow", user: profile._id })
 
-    const follow = await unfollow_to_user_by_id(profile.data._id, followed_user.data._id)
+    const follow = await unfollowToUserById(profile._id, followed_user.data._id)
 
     global.Logger.log({
         type: "unfollow",
@@ -240,14 +139,13 @@ async function unfollow(req) {
                 follows: follow.data.followed.follows,
                 followers: follow.data.followed.followers
             }  
-        },
-        code: 200
+        }
     }
 }
 
 module.exports = {
-    get_users,
-    get_user,
+    getUsers,
+    getUserByNickName,
     follow,
     unfollow
 }

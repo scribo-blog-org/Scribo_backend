@@ -1,8 +1,8 @@
-const EmailVerificationCode = require('../models/email')
+const EmailVerificationCode = require("../models/email")
 
 async function getVerificationCode(email) {
     if(!email) {
-        throw new AppError("Missing email!")
+        throw new AppError({ message: "Missing email!" })
     }
 
     const result = await EmailVerificationCode.findOne({ email: email })
@@ -21,7 +21,7 @@ async function getVerificationCode(email) {
     }
 }
 
-async function create(email, code) {
+async function createVerificationCode(email, code) {
     if(!code) {
         return {
             status: false,
@@ -83,7 +83,7 @@ async function deleteVerificationCode(email) {
 }
 
 module.exports = {
-    create,
+    createVerificationCode,
     deleteVerificationCode,
     getVerificationCode
 }

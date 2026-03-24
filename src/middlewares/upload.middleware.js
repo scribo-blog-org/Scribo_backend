@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const BadRequestError = require('../errors/BadRequestError');
+const AppError = require('../errors/AppError');
 
 const storage = multer.memoryStorage();
 
@@ -9,11 +10,25 @@ const fileFilter = (allowedFields = []) => (req, file, cb) => {
     const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
 
     if (!allowedExts.includes(ext)) {
-        return cb(new BadRequestError(`File type not allowed: ${ext}`));
+        return cb(new BadRequestError({
+            errors: {
+                file: {
+                    message: "File type not allowed",
+                    data: { ext }
+                }
+            }
+        }));
     }
 
     if (allowedFields.length && !allowedFields.includes(file.fieldname)) {
-        return cb(new BadRequestError(`Unexpected file field: ${file.fieldname}`));
+        return cb(new BadRequestError({
+            errors: {
+                file: {
+                    message: "Unexpected file field",
+                    data: { field: file.fieldname }
+                }
+            }
+        }));
     }
 
     cb(null, true);
@@ -47,7 +62,7 @@ function uploadMiddleware(fields = []) {
         };
     }
 
-    throw new Error('Upload middleware requires at least one field');
+    throw new AppError({ message: 'Upload middleware requires at least one field' });
 }
 
 module.exports = uploadMiddleware;

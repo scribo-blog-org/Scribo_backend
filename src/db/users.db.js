@@ -60,7 +60,7 @@ async function getUserByQuery(query = {}, options = { with_password: false, with
     }
 }
 
-async function follow_to_user_by_id(follower_id, followed_id) {
+async function followToUserById(follower_id, followed_id) {
     const follower = await User.findOneAndUpdate(
         { _id: follower_id },
         {
@@ -104,7 +104,7 @@ async function follow_to_user_by_id(follower_id, followed_id) {
     }
 }
 
-async function unfollow_to_user_by_id(follower_id, followed_id) {
+async function unfollowToUserById(follower_id, followed_id) {
     const follower = await User.findOneAndUpdate(
         { _id: follower_id },
         {
@@ -149,7 +149,7 @@ async function unfollow_to_user_by_id(follower_id, followed_id) {
     }
 }
 
-async function remove_post_from_saved(user_id, post_id) {
+async function removePostFromSaved(user_id, post_id) {
     const new_user = await User.findOneAndUpdate(
         { _id: user_id },
         { $pull: { saved_posts: new ObjectId(post_id) } },
@@ -170,10 +170,30 @@ async function remove_post_from_saved(user_id, post_id) {
     }
 }
 
+async function createNewUser(user) {
+    if(!user) {
+        return {
+            status: false,
+            message: "User object is empty!",
+            data: null
+        }
+    }
+
+    const newUser = new User(user)
+    const savedUser = await newUser.save();
+
+    return {
+        status: true,
+        message: "Success created new account",
+        data: savedUser
+    }
+}
+
 module.exports = {
     getUsersByQuery,
     getUserByQuery,
-    follow_to_user_by_id,
-    unfollow_to_user_by_id,
-    remove_post_from_saved
+    followToUserById,
+    unfollowToUserById,
+    removePostFromSaved,
+    createNewUser
 }

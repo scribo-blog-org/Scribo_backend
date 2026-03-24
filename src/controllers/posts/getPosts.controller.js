@@ -1,9 +1,9 @@
 const { getPosts } = require('../../services/posts.services')
 
-const getPostsController = async (req, res) => {
+const getPostsController = async (req, res, next) => {
     try { 
         const params = req.query
-        const expand = params.expand
+        const expand = params.expand ?? null
         delete params.expand
 
         const result = await getPosts(params, expand)

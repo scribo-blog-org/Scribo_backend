@@ -1,5 +1,5 @@
 class AppError extends Error {
-    constructor(message, errors = null, status = 500, isOperational = false) {
+    constructor({ message = "Internal server error", errors = null, status = 500, isOperational = false } = {}) {
         super(message);
         this.status = status;
         this.errors = errors;

@@ -1,8 +1,8 @@
 const AppError = require('./AppError');
 
 class ConflictError extends AppError {
-    constructor(message, errors = null) {
-        super(message, errors, 409, true);
+    constructor({ message = "Conflict error!", errors = null } = {}) {
+        super({ message, errors, status: 409, isOperational: true });
     }
 }
 

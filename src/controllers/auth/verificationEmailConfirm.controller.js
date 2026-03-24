@@ -1,4 +1,4 @@
-const confirmEmailCode = require('../../services/auth/verification.service').confirmEmailCode
+const { confirmEmailCode } = require('../../services/auth/verification.service')
 
 const verificationEmailConfirmController = async (req, res, next) => {
     try {

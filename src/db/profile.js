@@ -1,14 +1,14 @@
 const User = require('../models/User')
-const { get_post_by_query } = require('./posts')
-const { get_user_by_query } = require('./users.db')
+const { getPostByQuery } = require('./posts')
+const { getUserByQuery } = require('./users.db')
 const { Types } = require("mongoose")
 
-async function add_post_to_saved(user_id, post_id) {
-    const user = await get_user_by_query({ "_id": user_id }, { with_saved_posts: true })
+async function addPostToSaved(user_id, post_id) {
+    const user = await getUserByQuery({ "_id": user_id }, { with_saved_posts: true })
 
     if(!user.status) return user
 
-    const post = await get_post_by_query({ "_id": post_id })
+    const post = await getPostByQuery({ "_id": post_id })
 
     if(!post.status) return post
 
@@ -33,12 +33,12 @@ async function add_post_to_saved(user_id, post_id) {
     }
 }
 
-async function remove_post_from_saved(user_id, post_id) {
-    const user = await get_user_by_query({ "_id": user_id }, { with_saved_posts: true })
+async function removePostFromSaved(user_id, post_id) {
+    const user = await getUserByQuery({ "_id": user_id }, { with_saved_posts: true })
 
     if(!user.status) return user
 
-    const post = await get_post_by_query({ "_id": post_id })
+    const post = await getPostByQuery({ "_id": post_id })
 
     if(!post.status) return post
 
@@ -62,8 +62,8 @@ async function remove_post_from_saved(user_id, post_id) {
     }
 }
 
-async function read_notifications_by_user_id(user_id) {
-    const user = await get_user_by_query({ "_id": user_id })
+async function readNotificationsByUserId(user_id) {
+    const user = await getUserByQuery({ "_id": user_id })
 
     if(!user.status) {
         return {
@@ -90,11 +90,11 @@ async function read_notifications_by_user_id(user_id) {
     }
 }
 
-async function add_notification_to_user_by_id(user_id, notification) {
+async function addNotificationToUserById(user_id, notification) {
     if(!notification || !notification.type || (notification.type != "follow" && notification.type != "unfollow") ) {
         throw new Error(`Incorrect type of notification!\nnotification: ${JSON.stringify(notification, null, 2)}`)
     }
-    let user = await get_user_by_query({ "_id": user_id })
+    let user = await getUserByQuery({ "_id": user_id })
     
     if(!user.status) {
         throw new Error(`Failed to find user!\nuser_id: ${user_id}` )
@@ -132,8 +132,8 @@ async function add_notification_to_user_by_id(user_id, notification) {
     }
 }
 
-async function update_profile_by_id(user_id, update_fields) {
-    const user = await get_user_by_query({ "_id": user_id })
+async function updateProfileById(user_id, update_fields) {
+    const user = await getUserByQuery({ "_id": user_id })
     if(!user.status) return user
 
     const result = await User.findOneAndUpdate( 
@@ -149,9 +149,9 @@ async function update_profile_by_id(user_id, update_fields) {
 }
 
 module.exports = {
-    add_post_to_saved,
-    remove_post_from_saved,
-    read_notifications_by_user_id,
-    add_notification_to_user_by_id,
-    update_profile_by_id
+    addPostToSaved,
+    removePostFromSaved,
+    readNotificationsByUserId,
+    addNotificationToUserById,
+    updateProfileById
 }

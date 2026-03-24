@@ -11,19 +11,28 @@ const { getUserByQuery } = require('../../db/users.db')
 
 async function loginByGoogle(google_token) {
     if(!google_token) {
-        throw new AppError("Google token is required for this operation")
+        throw new AppError({ message: "Google token is required for this operation" })
     }
     const result = await getEmailByGoogleToken(google_token)
 
     if(!result.status) {
-        throw new BadRequestError("Google token is invalid or expired")
+        throw new BadRequestError({
+            errors: {
+                body: {
+                    google_token: {
+                        message: "Google token is invalid",
+                        data: google_token
+                    }
+                }
+            }
+        })
     }
 
     const user = await getUserByQuery({ email: result.email })
 
     if(!user.status) 
     {
-        throw new NotFoundError("User with this email is not found")
+        throw new NotFoundError({ message: "User with this email is not found" })
     }
 
     return {
@@ -35,9 +44,9 @@ async function loginByGoogle(google_token) {
     }
 }
 
-async function loginByUserName(userName, password) {
+async function loginByUserName({ userName, password }) {
     if(!userName || !password) {
-        throw new AppError("User name and password are required for this operation")
+        throw new AppError({ message: "User name and password are required for this operation" })
     }
     const user = await getUserByQuery({
         $or: [
@@ -47,11 +56,11 @@ async function loginByUserName(userName, password) {
     }, { with_password: true });
 
     if(!user.status) {
-        throw new NotFoundError("User with this email or nick name is not found")
+        throw new NotFoundError({ message: "User with this email or nick name is not found" })
     }
 
     if(!await compare_passwords(password, user.data.password)) {
-        throw new UnAuthorizedError("Invalid password or user name")
+        throw new UnAuthorizedError({ message: "Invalid password or login" })
     }
 
     return {
