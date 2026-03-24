@@ -1,6 +1,6 @@
 {
   "name": "scribo-backend",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "REST API server for the Scribo blog platform",
   "main": "src/server.js",
   "scripts": {
