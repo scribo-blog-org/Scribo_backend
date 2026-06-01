@@ -34,13 +34,9 @@ async function addPostToSaved(user_id, post_id) {
 }
 
 async function removePostFromSaved(user_id, post_id) {
-    const user = await getUserByQuery({ "_id": user_id }, { with_saved_posts: true })
+    const user = await getUserByQuery({ "_id": user_id })
 
     if(!user.status) return user
-
-    const post = await getPostByQuery({ "_id": post_id })
-
-    if(!post.status) return post
 
     if(!user.data.saved_posts.some(p => p.toString() === post_id)) {
         return {
