@@ -4,12 +4,14 @@ const AppError = require('../errors/AppError')
 const NotFoundError = require('../errors/NotFoundError')
 const ConflictError = require('../errors/ConflictError')
 
-async function getUserByNickName(nickName){
+async function getUserByNickName(nickName, options = {}) {
     if(!nickName) {
         throw new AppError({ message: "Nick name is required" })
     }
 
-    const user = await getUserByQuery({ "nick_name": nickName })
+    const user = await getUserByQuery({ "nick_name": nickName }, options=options)
+    
+    if(user.data.is_saved_posts_public === false) delete user.data.saved_posts
 
     if(!user.status) {
         throw new NotFoundError({ message: "User not found" })
@@ -29,6 +31,11 @@ async function getUsers(params){
 
     const users = await getUsersByQuery(params)
     
+    users.data = users.data.map(user => {
+        if(user.is_saved_posts_public === false) delete user.saved_posts
+        return user
+    })
+
     if(!users.status) {
         throw new NotFoundError({ message: "Users not found" })
     }

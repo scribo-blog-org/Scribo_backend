@@ -145,6 +145,11 @@ function validate(fields) {
                     errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Field is_email_public should be boolean!", data: field.value }})
                 }
                 break
+            case "is_saved_posts_public":
+                if(!isBooleanValue(field.value)) {
+                    errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Field is_saved_posts_public should be boolean!", data: field.value }})
+                }
+                break
             case "email":
                 if(!field.value) {
                     errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Missing email!", data: "" }})

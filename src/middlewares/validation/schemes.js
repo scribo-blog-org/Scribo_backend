@@ -99,6 +99,7 @@ const updateProfileSchema = new Schema()
     .optional('description')
     .optional('avatar')
     .optional('is_email_public')
+    .optional('is_saved_posts_public')
     .build();
 
 const savePostSchema = new Schema()

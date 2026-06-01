@@ -2,7 +2,7 @@ const { getPosts } = require('../../services/posts.services')
 
 const getPostsController = async (req, res, next) => {
     try { 
-        const params = req.query
+        const params = { ...req.query }
         const expand = params.expand ?? null
         delete params.expand
 
