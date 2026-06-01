@@ -12,6 +12,65 @@ const NotFoundError = require('../errors/NotFoundError')
 const AppError = require('../errors/AppError');
 const UnAuthorizedError = require('../errors/UnAuthorizedError');
 const ConflictError = require('../errors/ConflictError');
+const BadRequestError = require('../errors/BadRequestError');
+
+function normalizePostIdsFilter(params = {}) {
+    const hasIdsQuery = Object.prototype.hasOwnProperty.call(params, 'ids')
+        || Object.prototype.hasOwnProperty.call(params, 'id')
+        || Object.prototype.hasOwnProperty.call(params, '_id')
+
+    const rawIds = []
+    const candidates = [params.ids, params.id, params._id]
+
+    for (const candidate of candidates) {
+        if (candidate === undefined || candidate === null) continue
+
+        if (Array.isArray(candidate)) {
+            for (const value of candidate) {
+                rawIds.push(...String(value).split(','))
+            }
+            continue
+        }
+
+        rawIds.push(...String(candidate).split(','))
+    }
+
+    const ids = rawIds
+        .map((id) => id.trim())
+        .filter(Boolean)
+
+    if (!ids.length) {
+        if (hasIdsQuery) {
+            return { ...params, __emptyPostsResult: true }
+        }
+
+        return params
+    }
+
+    const invalidIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id))
+
+    if (invalidIds.length) {
+        throw new BadRequestError({
+            errors: {
+                query: {
+                    ids: {
+                        message: 'Incorrect id format in ids query field!',
+                        data: invalidIds
+                    }
+                }
+            }
+        })
+    }
+
+    const uniqueIds = [...new Set(ids)]
+
+    delete params.ids
+    delete params.id
+    delete params._id
+    params._id = { $in: uniqueIds }
+
+    return params
+}
 
 async function createPost({
     title,
@@ -75,6 +134,19 @@ async function getPosts(params, expand) {
     if(!params) {
         throw new AppError({ message: "Missing required fields!" })
     }
+
+    params = normalizePostIdsFilter(params)
+
+    if (params.__emptyPostsResult) {
+        delete params.__emptyPostsResult
+
+        return {
+            status: true,
+            message: "Success fetched posts",
+            data: []
+        }
+    }
+
     const posts = await getPostsByQuery(params)
 
     if(!posts.status) {
@@ -116,7 +188,7 @@ async function getPostById(id, expand) {
     }
 }
 
-async function deletePost(id) {
+async function deletePost(id, profile) {
     if(!id) {
         throw new AppError({ message: "Missing required fields!" })
     }
@@ -127,12 +199,12 @@ async function deletePost(id) {
         throw new NotFoundError({ message: "Post not found!" })
     }
 
-    let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) }) 
-
+    let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) })
     if(users_with_saved_post.status) {
         for (const target_user of users_with_saved_post.data) {
+            console.log(target_user, id)
             const result = await removePostFromSaved(target_user._id, id)
-
+            console.log(result)
             if(!result.status) {
                 global.Logger.log({
                     type: "error",

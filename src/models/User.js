@@ -10,6 +10,7 @@ let shema = new Schema({
     is_admin: { type: Boolean, required: true, default: false },
     is_verified: { type: Boolean, required: true, default: false },
     is_email_public: { type: Boolean, required: true, default: true },
+    is_saved_posts_public: { type: Boolean, required: true, default: true },
     saved_posts: [
         {
             type: Types.ObjectId,

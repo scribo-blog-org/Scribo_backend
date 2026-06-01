@@ -1,6 +1,13 @@
 const User = require('../models/User')
 
-async function getUsersByQuery(query = {}, options = { with_password: false, with_saved_posts: false, with_notifications: false }) {
+async function getUsersByQuery(query = {}, options = { }) {
+    options = {
+        with_password: false,
+        with_saved_posts: true,
+        with_notifications: false,
+        ...options,
+    };
+    
     let users = await User.find(query)
 
     if(users.length === 0) {
@@ -36,7 +43,14 @@ async function getUsersByQuery(query = {}, options = { with_password: false, wit
     }
 }
 
-async function getUserByQuery(query = {}, options = { with_password: false, with_saved_posts: false, with_notifications: false }) {
+async function getUserByQuery(query = {}, options = { }) {
+    options = {
+        with_password: false,
+        with_saved_posts: true,
+        with_notifications: false,
+        ...options,
+    };
+
     let user = await User.findOne(query)
 
     if(!user) {
@@ -48,10 +62,9 @@ async function getUserByQuery(query = {}, options = { with_password: false, with
     }
 
     const userObj = user.toObject();
-
-    if(!options.with_password) delete userObj.password
-    if(!options.with_saved_posts) delete userObj.saved_posts
-    if(!options.with_notifications) delete userObj.notifications
+    if(options.with_password === false) delete userObj.password
+    if(options.with_saved_posts === false) delete userObj.saved_posts
+    if(options.with_notifications === false) delete userObj.notifications
 
     return {
         status: true,
