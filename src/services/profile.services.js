@@ -40,6 +40,7 @@ async function updateProfile(profile, data) {
             data.avatar = null
         }
     }
+
     const result = await updateProfileById(profile._id, data)
     
     global.Logger.log({

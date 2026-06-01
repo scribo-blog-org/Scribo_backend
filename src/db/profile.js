@@ -134,13 +134,14 @@ async function addNotificationToUserById(user_id, notification) {
 
 async function updateProfileById(user_id, update_fields) {
     const user = await getUserByQuery({ "_id": user_id })
+    
     if(!user.status) return user
-
-    const result = await User.findOneAndUpdate( 
+    const result = await User.findOneAndUpdate(
         { _id: user_id },
         { $set: update_fields },
         { new: true }
     );  
+
     return {
         status: true,
         message: "Success updated profile",
