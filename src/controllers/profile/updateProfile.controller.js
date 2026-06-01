@@ -3,7 +3,7 @@ const { updateProfile } = require('../../services/profile.services')
 const updateProfileController = async(req, res, next) => {
     try {
         const nullableFields = ['description'];
-        const mandatoryFields = ['nickname', 'is_email_public'];
+        const mandatoryFields = ['nick_name', 'is_email_public'];
 
         const data = {};
 
@@ -25,7 +25,6 @@ const updateProfileController = async(req, res, next) => {
         if (data.is_email_public !== undefined) {
             data.is_email_public = String(data.is_email_public).toLowerCase() === 'true';
         }
-
         const result = await updateProfile(req.profile, data)
 
         res.status(200).json(result)
