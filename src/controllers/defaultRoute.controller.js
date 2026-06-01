@@ -1,10 +1,10 @@
-const defaultRoute = require('../services/default.services')
+const { defaultRoute } = require('../services/default.services')
 
-const defaultRouteController = (req, res, next) => {
+const defaultRouteController = async (req, res, next) => {
     try {
-        const result = defaultRoute()
+        const result = await defaultRoute()
 
-        res.status(200).json(result)
+        res.setHeader("Content-Type", "text/html").status(200).send(result)
     }
     catch(error) {
         next(error)
