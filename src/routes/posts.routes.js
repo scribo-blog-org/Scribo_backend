@@ -4,6 +4,7 @@ const router = Router()
 const {
     getPostByIdSchema,
     createPostSchema,
+    editPostSchema,
     deletePostSchema,
     savePostSchema,
     getPostsSchema
@@ -14,11 +15,12 @@ const uploadMiddleware = require('../middlewares/upload.middleware')
 const validateMiddleware = require('../middlewares/validation/validate.middleware')
 
 const authMiddleware = require('../middlewares/auth.middleware')
-const checkAccessMiddleware = require('../middlewares/checkAccess.middleware')
+const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
 
 const getPostsController = require('../controllers/posts/getPosts.controller')
 const getPostByIdController = require('../controllers/posts/getPostById.controller')
 const createPostController = require('../controllers/posts/createPost.controller')
+const editPostController = require('../controllers/posts/editPost.controller')
 const deletePostController = require('../controllers/posts/deletePost.controller')
 const savePostController = require('../controllers/posts/savePost.controller')
 const unsavePostController = require('../controllers/posts/unsavePost.controller')
@@ -38,16 +40,25 @@ router.get(
 router.post(
     '/', 
     authMiddleware,
-    checkAccessMiddleware,
+    checkAdminAccessMiddleware,
     uploadMiddleware(['featured_image']),
     validateMiddleware(createPostSchema),
     createPostController
 )
 
+router.patch(
+    '/:id',
+    authMiddleware,
+    checkAdminAccessMiddleware,
+    uploadMiddleware(['featured_image']),
+    validateMiddleware(editPostSchema),
+    editPostController
+)
+
 router.delete(
     '/:id',
     authMiddleware,
-    checkAccessMiddleware,
+    checkAdminAccessMiddleware,
     validateMiddleware(deletePostSchema),
     deletePostController
 )

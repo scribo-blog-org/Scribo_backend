@@ -52,6 +52,24 @@ async function createNewPost(title, content_text, category, author, featured_ima
     }
 }
 
+async function updatePostById(id, data) {
+    const updated_post = await Post.findByIdAndUpdate(id, data, { new: true })
+
+    if(!updated_post) {
+        return {
+            status: false,
+            message: "Post not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success updated post",
+        data: updated_post
+    }
+}
+
 async function deletePostById(id) {
     const deleted_post = await Post.findByIdAndDelete(id);
 
@@ -74,5 +92,6 @@ module.exports = {
     getPostsByQuery,
     getPostByQuery,
     createNewPost,
+    updatePostById,
     deletePostById
 }

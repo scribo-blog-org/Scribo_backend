@@ -1,6 +1,6 @@
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { deleteFile } = require("./aws.services")
-const { getPostByQuery, getPostsByQuery, createNewPost, deletePostById } = require('../db/posts')
+const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 
 const { uploadImage } = require('./aws.services')
@@ -114,6 +114,50 @@ async function createPost({
         status: true,
         message: "Success created post",
         data: post_creating_result.data
+    }
+}
+
+async function editPost(id, data, profile) {
+    if(!id || !data || !profile) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+
+    const post = await getPostByQuery({ "_id": id })
+
+    if(!post.status) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+
+    if(Object.keys(data).includes("featured_image")) {
+        if(post.data.featured_image) {
+            await deleteFile(post.data.featured_image)
+        }
+
+        if(data.featured_image !== undefined && data.featured_image !== null) { 
+            const upload_image_result = await uploadImage(data.featured_image, "featured_image", Date.now().toString())
+            data.featured_image = upload_image_result.data.url
+        }
+        else {
+            data.featured_image = null
+        }
+    }
+
+    const result = await updatePostById(id, data)
+    
+    global.Logger.log({
+        type: "update_post",
+        message: `User ${profile.nick_name} updated post ${post._id}`,
+        data: {
+            user: profile._id,
+            post_id: post._id,
+            updates: data
+        }
+    })
+
+    return {
+        status: true,
+        message: "Success updated post",
+        data: result.data
     }
 }
 
@@ -308,6 +352,7 @@ module.exports = {
     getPosts,
     getPostById,
     createPost,
+    editPost,
     deletePost,
     savePost,
     unsavePost

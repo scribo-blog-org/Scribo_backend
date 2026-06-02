@@ -90,6 +90,14 @@ const createPostSchema = new Schema()
     .optional('feature_image')
     .build();
 
+const editPostSchema = new Schema()
+    .required('id', { source: 'params' })
+    .optional('title')
+    .optional('content_text')
+    .optional('category')
+    .optional('feature_image')
+    .build();
+
 const deletePostSchema = new Schema()
     .required('id', { source: 'params' })
     .build();
@@ -131,6 +139,7 @@ module.exports = {
     verificationEmailConfirmSchema,
     getPostByIdSchema,
     createPostSchema,
+    editPostSchema,
     deletePostSchema,
     updateProfileSchema,
     savePostSchema,
