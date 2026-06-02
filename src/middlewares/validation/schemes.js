@@ -129,6 +129,11 @@ const followSchema = new Schema()
     .required('id', { source: 'params' })
     .build();
 
+const commentsSchema = new Schema()
+    .required('id', { source: 'params' })
+    .required('content_text')
+    .build();
+
 module.exports = {
     loginUsernameSchema,
     loginGoogleSchema,
@@ -146,5 +151,6 @@ module.exports = {
     getUserByNickNameSchema,
     getUsersSchema,
     followSchema,
-    getPostsSchema
+    getPostsSchema,
+    commentsSchema
 }
