@@ -1,6 +1,6 @@
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { deleteFile } = require("./aws.services")
-const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
+const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, addCommentToPost } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 
 const { uploadImage } = require('./aws.services')
@@ -197,12 +197,32 @@ async function getPosts(params, expand) {
         throw new NotFoundError({ message: "Posts not found!" })
     }
 
-    if(expand === "author") {
+    const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
+    
+    if(expand_options.includes("author")) {
         for (let i = 0; i < posts.data.length; i++) {
             posts.data[i] = await insertAuthorToPost(posts.data[i])
         }
     }
     
+    if(expand_options.includes("comments")) {
+        for (let i = 0; i < posts.data.length; i++) {
+            const comments = []
+            for (const comment of posts.data[i].comments) {
+                const author = await getUserByQuery({ '_id': comment.author })
+                if(author.status){
+                    comment.author = {
+                        _id: author.data._id,
+                        nick_name: author.data.nick_name,
+                        avatar: author.data.avatar
+                    }
+                }
+                comments.push(comment)
+            }
+            posts.data[i].comments = comments
+        }
+    }
+
     return {
         status: true,
         message: "Success fetched posts",
@@ -221,10 +241,22 @@ async function getPostById(id, expand) {
         throw new NotFoundError({ message: "Post not found!" })
     }
 
-    if(expand === "author") {
+    const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
+
+    if(expand_options.includes("author")) {
         post.data = await insertAuthorToPost(post.data)
     }
-    
+
+    if(expand_options.includes("comments")) {
+        const comments = []
+        for (const comment of post.data.comments) {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) comment.author = author.data
+            comments.push(comment)
+        }
+        post.data.comments = comments
+    }
+
     return {
         status: true,
         message: "Success fetched post",
@@ -348,6 +380,40 @@ async function unsavePost(profile, id) {
     }
 }
 
+async function commentPost(id, data, profile, expand) {
+    if(!id || !data || !profile) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+    
+    let result = await addCommentToPost(id, data, profile._id)
+    result.data = result.data.toObject()
+    if(expand === "comments") {
+        for(let comment of result.data.comments) {
+            const author = await getUserByQuery({ '_id': comment.author })
+            comment.author = {
+                _id: author.data._id,
+                nick_name: author.data.nick_name,
+                avatar: author.data.avatar,
+                is_verified: author.data.is_verified
+            }
+        }
+    }
+    global.Logger.log({
+        type: "comment_post",
+        message: `User ${profile.nick_name} commented post ${id}`,
+        data: {
+            user: profile._id,
+            post_id: new mongoose.Types.ObjectId(id)
+        }
+    })
+
+    return {
+        status: true,
+        message: "Success commented post",
+        data: result.data
+    }
+}
+
 module.exports = {
     getPosts,
     getPostById,
@@ -355,5 +421,6 @@ module.exports = {
     editPost,
     deletePost,
     savePost,
-    unsavePost
+    unsavePost,
+    commentPost
 }

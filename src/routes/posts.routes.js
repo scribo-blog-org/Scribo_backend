@@ -7,7 +7,8 @@ const {
     editPostSchema,
     deletePostSchema,
     savePostSchema,
-    getPostsSchema
+    getPostsSchema,
+    commentsSchema
 } = require('../middlewares/validation/schemes')
 
 const uploadMiddleware = require('../middlewares/upload.middleware')
@@ -24,6 +25,7 @@ const editPostController = require('../controllers/posts/editPost.controller')
 const deletePostController = require('../controllers/posts/deletePost.controller')
 const savePostController = require('../controllers/posts/savePost.controller')
 const unsavePostController = require('../controllers/posts/unsavePost.controller')
+const commentsController = require('../controllers/posts/comments.controller')
 
 router.get(
     '/',
@@ -53,6 +55,13 @@ router.patch(
     uploadMiddleware(['featured_image']),
     validateMiddleware(editPostSchema),
     editPostController
+)
+
+router.post(
+    '/:id/comments',
+    authMiddleware,
+    validateMiddleware(commentsSchema),
+    commentsController
 )
 
 router.delete(

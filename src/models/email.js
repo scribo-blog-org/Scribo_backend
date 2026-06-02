@@ -1,6 +1,6 @@
 const {Schema, model} = require('mongoose');
 
-let shema = new Schema({
+let schema = new Schema({
     email: { type: String, required: true, index: true },
     code: { type: String, required: true },
     createdAt: {
@@ -10,4 +10,4 @@ let shema = new Schema({
     }
 })
 
-module.exports = model('EmailVerificationCode', shema, "email_verification_codes");
+module.exports = model('EmailVerificationCode', schema, "email_verification_codes");

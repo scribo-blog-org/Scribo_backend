@@ -88,10 +88,32 @@ async function deletePostById(id) {
     }
 }
 
+async function addCommentToPost(id, comment, author) {
+    const post = await Post.findById(id)
+
+    if(!post) {
+        return {
+            status: false,
+            message: "Post not found!",
+            data: null
+        }
+    }
+
+    post.comments.push({ ...comment, author })
+    await post.save()
+
+    return {
+        status: true,
+        message: "Success added comment",
+        data: post
+    }
+}
+
 module.exports = {
     getPostsByQuery,
     getPostByQuery,
     createNewPost,
     updatePostById,
-    deletePostById
+    deletePostById,
+    addCommentToPost
 }

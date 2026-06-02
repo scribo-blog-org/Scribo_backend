@@ -1,6 +1,6 @@
 const {Schema, model, Types} = require('mongoose');
 
-let shema = new Schema({
+let schema = new Schema({
     nick_name: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     email: { type: String, required: true },
@@ -15,7 +15,7 @@ let shema = new Schema({
         {
             type: Types.ObjectId,
             ref: "Post",
-            reuired: false
+            required: false
         }
     ],
     follows: [
@@ -43,4 +43,4 @@ let shema = new Schema({
     ]
 })
 
-module.exports = model('User', shema);
+module.exports = model('User', schema);
