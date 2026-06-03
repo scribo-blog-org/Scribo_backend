@@ -2,12 +2,16 @@ const { editPost } = require('../../services/posts.services')
 
 const editPostController = async (req, res, next) => {
     try {
-        const result = await editPost(req.params.id, {
-            title: req.body.title,
-            content_text: req.body.content_text,
-            category: req.body.category,
-            featured_image: req.file
-        }, req.profile)
+        let data = {}
+
+        data.body = req.body.title
+        data.content_text = req.body.content_text
+        data.category = req.body.category
+
+         if(Object.keys(req.body).includes("featured_image") || req.file) {
+            data['featured_image'] = req.file
+        }
+        const result = await editPost(req.params.id, data, req.profile)
 
         res.status(200).json(result)
     }
