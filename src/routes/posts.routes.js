@@ -25,7 +25,8 @@ const editPostController = require('../controllers/posts/editPost.controller')
 const deletePostController = require('../controllers/posts/deletePost.controller')
 const savePostController = require('../controllers/posts/savePost.controller')
 const unsavePostController = require('../controllers/posts/unsavePost.controller')
-const commentsController = require('../controllers/posts/comments.controller')
+const doCommentController = require('../controllers/posts/doComments.controller')
+const getCommentsController = require('../controllers/posts/getComments.controller')
 
 router.get(
     '/',
@@ -61,7 +62,13 @@ router.post(
     '/:id/comments',
     authMiddleware,
     validateMiddleware(commentsSchema),
-    commentsController
+    doCommentController
+)
+
+router.get(
+    '/:id/comments',
+    validateMiddleware(getPostByIdSchema),
+    getCommentsController
 )
 
 router.delete(

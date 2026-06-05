@@ -1,7 +1,9 @@
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { deleteFile } = require("./aws.services")
-const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, addCommentToPost } = require('../db/posts')
+const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
+
+const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery } = require('../db/postComments')
 
 const { uploadImage } = require('./aws.services')
 
@@ -380,38 +382,90 @@ async function unsavePost(profile, id) {
     }
 }
 
-async function commentPost(id, data, profile, expand) {
-    if(!id || !data || !profile) {
+async function commentPost(post_id, comment_text, parent_comment_id, profile) {
+    if(!post_id || !comment_text || !profile) {
         throw new AppError({ message: "Missing required fields!" })
     }
     
-    let result = await addCommentToPost(id, data, profile._id)
-    result.data = result.data.toObject()
-    if(expand === "comments") {
-        for(let comment of result.data.comments) {
-            const author = await getUserByQuery({ '_id': comment.author })
-            comment.author = {
-                _id: author.data._id,
-                nick_name: author.data.nick_name,
-                avatar: author.data.avatar,
-                is_verified: author.data.is_verified
-            }
-        }
+    let result
+    if(parent_comment_id) {
+        result = await addReplyToComment(parent_comment_id, comment_text, profile._id)
     }
-    global.Logger.log({
-        type: "comment_post",
-        message: `User ${profile.nick_name} commented post ${id}`,
-        data: {
-            user: profile._id,
-            post_id: new mongoose.Types.ObjectId(id)
-        }
-    })
+    else {
+        result = await addCommentToPost(post_id, comment_text, profile._id)
+    }
+
+
+    if(!result.status) {
+        throw new NotFoundError({ message: result.message })
+    }
 
     return {
         status: true,
         message: "Success commented post",
         data: result.data
     }
+}
+
+async function getComments(post_id, expand) {
+    let post_comments = await getCommentsByPostId(post_id)
+
+    if(!post_comments.status) {
+        throw new NotFoundError({ message: post_comments.message })
+    }
+
+    let data = []
+
+    for (const comment of post_comments.data) {
+        data.push({
+            ...comment.toObject(),
+            replies: await get_replies(comment._id, expand)
+        });
+        if(expand === "author") {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) {
+                data[data.length - 1].author = {
+                    _id: author.data._id,
+                    nick_name: author.data.nick_name,
+                    avatar: author.data.avatar
+                }
+            }
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success fetched comments",
+        data: data
+    }
+}
+
+async function get_replies(comment_id, expand) {
+    const comment_replies = await getCommentsByQuery({
+        parent_comment_id: comment_id
+    });
+    
+    if(!comment_replies.status) {
+        return [];
+    }
+
+    const replies = comment_replies.data;
+
+    for (const comment of replies) {
+        if(expand === "author") {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) {
+                comment.author = {
+                    _id: author.data._id,
+                    nick_name: author.data.nick_name,
+                    avatar: author.data.avatar
+                }
+            }
+        }
+        comment.replies = await get_replies(comment._id, expand);
+    }
+
+    return replies;
 }
 
 module.exports = {
@@ -422,5 +476,6 @@ module.exports = {
     deletePost,
     savePost,
     unsavePost,
-    commentPost
+    commentPost,
+    getComments
 }

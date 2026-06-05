@@ -131,7 +131,8 @@ const followSchema = new Schema()
 
 const commentsSchema = new Schema()
     .required('id', { source: 'params' })
-    .required('content_text')
+    .optional('parent_comment_id')
+    .required('comment_text')
     .build();
 
 module.exports = {
