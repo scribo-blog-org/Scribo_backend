@@ -1,6 +1,6 @@
 const {Schema, model, Types} = require('mongoose');
 
-let shema = new Schema({
+let schema = new Schema({
     nick_name: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     email: { type: String, required: true },
@@ -15,7 +15,7 @@ let shema = new Schema({
         {
             type: Types.ObjectId,
             ref: "Post",
-            reuired: false
+            required: false
         }
     ],
     follows: [
@@ -38,9 +38,10 @@ let shema = new Schema({
             time: { type: Date, required: true, default: Date.now },
             type: { type: String },
             user: { type: Types.ObjectId, ref: "User", required: false },
-            object: { type: Types.ObjectId, ref: "Post", required: false },
+            post: { type: Types.ObjectId, ref: "Post", required: false },
+            comment: { type: Types.ObjectId, ref: "PostComment", required: false }
         }
     ]
 })
 
-module.exports = model('User', shema);
+module.exports = model('User', schema);

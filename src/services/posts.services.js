@@ -1,7 +1,10 @@
-const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { deleteFile } = require("./aws.services")
+
+const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
+const { addNotificationToUserById } = require('../db/profile.js')
+const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery } = require('../db/postComments')
 
 const { uploadImage } = require('./aws.services')
 
@@ -197,12 +200,32 @@ async function getPosts(params, expand) {
         throw new NotFoundError({ message: "Posts not found!" })
     }
 
-    if(expand === "author") {
+    const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
+    
+    if(expand_options.includes("author")) {
         for (let i = 0; i < posts.data.length; i++) {
             posts.data[i] = await insertAuthorToPost(posts.data[i])
         }
     }
     
+    if(expand_options.includes("comments")) {
+        for (let i = 0; i < posts.data.length; i++) {
+            const comments = []
+            for (const comment of posts.data[i].comments) {
+                const author = await getUserByQuery({ '_id': comment.author })
+                if(author.status){
+                    comment.author = {
+                        _id: author.data._id,
+                        nick_name: author.data.nick_name,
+                        avatar: author.data.avatar
+                    }
+                }
+                comments.push(comment)
+            }
+            posts.data[i].comments = comments
+        }
+    }
+
     return {
         status: true,
         message: "Success fetched posts",
@@ -221,10 +244,22 @@ async function getPostById(id, expand) {
         throw new NotFoundError({ message: "Post not found!" })
     }
 
-    if(expand === "author") {
+    const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
+
+    if(expand_options.includes("author")) {
         post.data = await insertAuthorToPost(post.data)
     }
-    
+
+    if(expand_options.includes("comments")) {
+        const comments = []
+        for (const comment of post.data.comments) {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) comment.author = author.data
+            comments.push(comment)
+        }
+        post.data.comments = comments
+    }
+
     return {
         status: true,
         message: "Success fetched post",
@@ -348,6 +383,110 @@ async function unsavePost(profile, id) {
     }
 }
 
+async function commentPost(post_id, comment_text, parent_comment_id, profile) {
+    if(!post_id || !comment_text || !profile) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+    
+    let result
+
+    
+    if(parent_comment_id) {
+        result = await addReplyToComment(parent_comment_id, comment_text, profile._id)
+        
+        const comment_author = (await getCommentsByQuery({ _id: parent_comment_id })).data[0].author
+        
+        if(comment_author.toString() !== profile._id.toString()) {
+            const res = await addNotificationToUserById(comment_author, { type: "reply_comment", user: profile._id, comment: result.data._id, post: post_id })
+            console.log(res)
+        }
+    }
+
+    else {
+        result = await addCommentToPost(post_id, comment_text, profile._id)
+        
+        const post_author = (await getPostById(post_id)).data.author
+        
+        if(post_author.toString() !== profile._id.toString()) {
+            await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id })
+        }
+    }
+
+    if(!result.status) {
+        throw new NotFoundError({ message: result.message })
+    }
+
+
+    return {
+        status: true,
+        message: "Success commented post",
+        data: result.data
+    }
+}
+
+async function getComments(post_id, expand) {
+    let post_comments = await getCommentsByPostId(post_id)
+
+    if(!post_comments.status) {
+        throw new NotFoundError({ message: post_comments.message })
+    }
+
+    let data = []
+
+    for (const comment of post_comments.data) {
+        data.push({
+            ...comment.toObject(),
+            replies: await get_replies(comment._id, expand)
+        });
+        if(expand === "author") {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) {
+                data[data.length - 1].author = {
+                    _id: author.data._id,
+                    nick_name: author.data.nick_name,
+                    avatar: author.data.avatar,
+                    is_verified: author.data.is_verified
+                }
+            }
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success fetched comments",
+        data: data
+    }
+}
+
+async function get_replies(comment_id, expand) {
+    const comment_replies = await getCommentsByQuery({
+        parent_comment_id: comment_id
+    });
+    
+    if(!comment_replies.status) {
+        return [];
+    }
+
+    const replies = comment_replies.data;
+
+    for (const comment of replies) {
+        if(expand === "author") {
+            const author = await getUserByQuery({ '_id': comment.author })
+            if(author.status) {
+                comment.author = {
+                    _id: author.data._id,
+                    nick_name: author.data.nick_name,
+                    avatar: author.data.avatar,
+                    is_verified: author.data.is_verified
+                }
+            }
+        }
+        comment.replies = await get_replies(comment._id, expand);
+    }
+
+    return replies;
+}
+
 module.exports = {
     getPosts,
     getPostById,
@@ -355,5 +494,7 @@ module.exports = {
     editPost,
     deletePost,
     savePost,
-    unsavePost
+    unsavePost,
+    commentPost,
+    getComments
 }

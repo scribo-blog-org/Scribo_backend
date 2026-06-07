@@ -93,5 +93,5 @@ module.exports = {
     getPostByQuery,
     createNewPost,
     updatePostById,
-    deletePostById
+    deletePostById,
 }
