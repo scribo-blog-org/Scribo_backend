@@ -87,7 +87,9 @@ async function readNotificationsByUserId(user_id) {
 }
 
 async function addNotificationToUserById(user_id, notification) {
-    if(!notification || !notification.type || (notification.type != "follow" && notification.type != "unfollow") ) {
+    notification_types = ["follow", "unfollow", "comment_post", "reply_comment"]
+
+    if(!notification || !notification.type || !notification_types.includes(notification.type)) {
         throw new Error(`Incorrect type of notification!\nnotification: ${JSON.stringify(notification, null, 2)}`)
     }
     let user = await getUserByQuery({ "_id": user_id })
@@ -104,6 +106,10 @@ async function addNotificationToUserById(user_id, notification) {
 
     if (notification?.post) {
         object.post = new Types.ObjectId(notification.post);
+    }
+
+    if(notification?.comment) {
+        object.comment = new Types.ObjectId(notification.comment);
     }
 
     if (Object.keys(object).length > 0) {

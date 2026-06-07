@@ -1,8 +1,9 @@
-const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { deleteFile } = require("./aws.services")
+
+const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
-
+const { addNotificationToUserById } = require('../db/profile.js')
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery } = require('../db/postComments')
 
 const { uploadImage } = require('./aws.services')
@@ -388,17 +389,33 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     }
     
     let result
+
+    
     if(parent_comment_id) {
         result = await addReplyToComment(parent_comment_id, comment_text, profile._id)
-    }
-    else {
-        result = await addCommentToPost(post_id, comment_text, profile._id)
+        
+        const comment_author = (await getCommentsByQuery({ _id: parent_comment_id })).data[0].author
+        
+        if(comment_author.toString() !== profile._id.toString()) {
+            const res = await addNotificationToUserById(comment_author, { type: "reply_comment", user: profile._id, comment: result.data._id, post: post_id })
+            console.log(res)
+        }
     }
 
+    else {
+        result = await addCommentToPost(post_id, comment_text, profile._id)
+        
+        const post_author = (await getPostById(post_id)).data.author
+        
+        if(post_author.toString() !== profile._id.toString()) {
+            await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id })
+        }
+    }
 
     if(!result.status) {
         throw new NotFoundError({ message: result.message })
     }
+
 
     return {
         status: true,
@@ -427,7 +444,8 @@ async function getComments(post_id, expand) {
                 data[data.length - 1].author = {
                     _id: author.data._id,
                     nick_name: author.data.nick_name,
-                    avatar: author.data.avatar
+                    avatar: author.data.avatar,
+                    is_verified: author.data.is_verified
                 }
             }
         }
@@ -458,7 +476,8 @@ async function get_replies(comment_id, expand) {
                 comment.author = {
                     _id: author.data._id,
                     nick_name: author.data.nick_name,
-                    avatar: author.data.avatar
+                    avatar: author.data.avatar,
+                    is_verified: author.data.is_verified
                 }
             }
         }

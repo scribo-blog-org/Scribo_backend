@@ -38,7 +38,8 @@ let schema = new Schema({
             time: { type: Date, required: true, default: Date.now },
             type: { type: String },
             user: { type: Types.ObjectId, ref: "User", required: false },
-            object: { type: Types.ObjectId, ref: "Post", required: false },
+            post: { type: Types.ObjectId, ref: "Post", required: false },
+            comment: { type: Types.ObjectId, ref: "PostComment", required: false }
         }
     ]
 })
