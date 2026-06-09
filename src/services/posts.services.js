@@ -4,7 +4,7 @@ const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
-const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery } = require('../db/postComments')
+const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentByPostId } = require('../db/postComments')
 
 const { uploadImage } = require('./aws.services')
 
@@ -281,9 +281,7 @@ async function deletePost(id, profile) {
     let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) })
     if(users_with_saved_post.status) {
         for (const target_user of users_with_saved_post.data) {
-            console.log(target_user, id)
             const result = await removePostFromSaved(target_user._id, id)
-            console.log(result)
             if(!result.status) {
                 global.Logger.log({
                     type: "error",
@@ -298,6 +296,34 @@ async function deletePost(id, profile) {
         }
     }
 
+    const comments = await getComments(new ObjectId(id))
+
+    function flattenComments(comments) {
+        const result = [];
+
+        function walk(items) {
+            for (const comment of items) {
+                result.push(comment);
+
+                if (comment.replies?.length) {
+                    walk(comment.replies);
+                }
+            }
+        }
+
+        walk(comments);
+
+        return result;
+    }
+
+    const comments_to_delete = flattenComments(comments.data)
+
+    for(const comment of comments_to_delete) {
+        const result = await deleteCommentByPostId(comment._id)
+        if(!result.status) {
+            throw new AppError({ message: `Error to delete comment with id ${comment._id} of post ${id}!` })
+        }
+    }
     await deleteFile(result.data.featured_image ?? "")
 
     global.Logger.log({
