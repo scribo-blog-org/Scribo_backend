@@ -176,7 +176,14 @@ function validate(fields) {
                 if(typeof field.value !== 'string' || field.value.length > 345 || !/^[A-Za-z0-9_.-]+$/.test(field.value.trim())) {
                     errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Incorrect type of google token!", data: field.value }})
                 }
-            
+            case "comment_text":
+                if(!field.value || field.value.trim().length === 0) {
+                    errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Comment text must be not empty!", data: field.value }})
+                    break
+                }
+                if(field.value.length > 500) {
+                    errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Comment text must be less than 500 characters!", data: field.value }})
+                }
         }
     }
     return {
