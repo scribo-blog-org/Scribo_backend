@@ -79,9 +79,29 @@ async function getCommentsByQuery(query = {}) {
     }
 }
 
+async function deleteCommentByPostId(comment_id) {
+    const result = await postComment.deleteOne({ _id: comment_id })
+
+    if(!result.deletedCount) {
+        return {
+            status: false,
+            message: "There is no comments to delete!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success deleted comments",
+        data: result
+    }
+
+}
+
 module.exports = {
     addCommentToPost,
     addReplyToComment,
     getCommentsByPostId,
-    getCommentsByQuery
+    getCommentsByQuery,
+    deleteCommentByPostId
 }
