@@ -4,7 +4,7 @@ const editPostController = async (req, res, next) => {
     try {
         let data = {}
 
-        data.body = req.body.title
+        data.title = req.body.title
         data.content_text = req.body.content_text
         data.category = req.body.category
 
