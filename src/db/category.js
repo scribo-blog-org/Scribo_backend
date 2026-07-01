@@ -1,4 +1,4 @@
-const Category = require("../models/category")
+const Category = require("../models/Category")
 const AppError = require("../errors/AppError")
 
 async function getAllCategories() {
