@@ -2,6 +2,7 @@ const { deleteFile } = require("./aws.services")
 
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
+const { getAllCategories, createNewCategory } = require('../db/category')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentByPostId } = require('../db/postComments')
@@ -104,6 +105,12 @@ async function createPost({
         
     const post_creating_result = await createNewPost(title, content_text, category, profile._id, img_url)
 
+    const all_categories = await getAllCategories()
+
+    if(!all_categories.data.some(cat => cat.name === category)) {
+        const create_new_category_result = await createNewCategory(category, null)
+    }
+
     global.Logger.log({
         type: "create_post",
         message: `User ${profile.nick_name} created post`,
@@ -168,8 +175,6 @@ async function insertAuthorToPost(post) {
     if(!post) {
         throw new AppError({ message: "Post is required to insert author!" })
     }
-
-    post = post.toObject()
     
     let author = await getUserByQuery({ '_id': post.author })
     if(author.status) post.author = author.data
@@ -194,10 +199,15 @@ async function getPosts(params, expand) {
         }
     }
 
-    const posts = await getPostsByQuery(params)
-
+    let posts = await getPostsByQuery(params)
+    
     if(!posts.status) {
         throw new NotFoundError({ message: "Posts not found!" })
+    }
+
+    for(const post of posts.data) {
+        const comment = await getCommentsByPostId(post._id)
+        post.comments = comment.data
     }
 
     const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
@@ -208,6 +218,7 @@ async function getPosts(params, expand) {
         }
     }
     
+
     if(expand_options.includes("comments")) {
         for (let i = 0; i < posts.data.length; i++) {
             const comments = []
@@ -513,6 +524,10 @@ async function get_replies(comment_id, expand) {
     return replies;
 }
 
+async function getCategories() {
+    return await getAllCategories();
+}
+
 module.exports = {
     getPosts,
     getPostById,
@@ -522,5 +537,6 @@ module.exports = {
     savePost,
     unsavePost,
     commentPost,
-    getComments
+    getComments,
+    getCategories
 }

@@ -1,7 +1,7 @@
 const Post = require('../models/Post')
 
 async function getPostsByQuery(query = {}) {
-    const posts = await Post.find(query)
+    const posts = await Post.find(query).lean()
     
     if (!posts.length) {
         return {
@@ -19,7 +19,7 @@ async function getPostsByQuery(query = {}) {
 }
 
 async function getPostByQuery(query = {}) {
-    const post = await Post.findOne(query)
+    const post = await Post.findOne(query).lean()
     
     if (!post) {
         return {
