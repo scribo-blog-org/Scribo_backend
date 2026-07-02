@@ -260,16 +260,8 @@ async function getPostById(id, expand) {
     if(expand_options.includes("author")) {
         post.data = await insertAuthorToPost(post.data)
     }
-
-    if(expand_options.includes("comments")) {
-        const comments = []
-        for (const comment of post.data.comments) {
-            const author = await getUserByQuery({ '_id': comment.author })
-            if(author.status) comment.author = author.data
-            comments.push(comment)
-        }
-        post.data.comments = comments
-    }
+    
+    post.data.comments = await getComments(post.data._id, expand_options.includes("comments") ? "author" : null)
 
     return {
         status: true,
