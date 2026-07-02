@@ -11,11 +11,11 @@ async function getUserByNickName(nickName, options = {}) {
 
     const user = await getUserByQuery({ "nick_name": nickName }, options=options)
     
-    if(user.data.is_saved_posts_public === false) delete user.data.saved_posts
-
     if(!user.status) {
         throw new NotFoundError({ message: "User not found" })
     }
+    
+    if(user.data.is_saved_posts_public === false) delete user.data.saved_posts
 
     return {
         status: true,
