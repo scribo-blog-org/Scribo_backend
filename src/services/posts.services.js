@@ -206,7 +206,7 @@ async function getPosts(params, expand) {
     }
 
     for(const post of posts.data) {
-        const comment = await getCommentsByPostId(post._id)
+        const comment = await getComments(post._id)
         post.comments = comment.data
     }
 
@@ -218,25 +218,6 @@ async function getPosts(params, expand) {
         }
     }
     
-
-    if(expand_options.includes("comments")) {
-        for (let i = 0; i < posts.data.length; i++) {
-            const comments = []
-            for (const comment of posts.data[i].comments) {
-                const author = await getUserByQuery({ '_id': comment.author })
-                if(author.status){
-                    comment.author = {
-                        _id: author.data._id,
-                        nick_name: author.data.nick_name,
-                        avatar: author.data.avatar
-                    }
-                }
-                comments.push(comment)
-            }
-            posts.data[i].comments = comments
-        }
-    }
-
     return {
         status: true,
         message: "Success fetched posts",
@@ -427,7 +408,6 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
         
         if(comment_author.toString() !== profile._id.toString()) {
             const res = await addNotificationToUserById(comment_author, { type: "reply_comment", user: profile._id, comment: result.data._id, post: post_id })
-            console.log(res)
         }
     }
 
