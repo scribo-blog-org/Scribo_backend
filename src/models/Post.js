@@ -7,6 +7,7 @@ let schema = new Schema({
     content_text: {type: String, required: true},
     category: {type: String, required: true},
     created_date: {type: Date, required: true, default: Date.now},
+    likes: [{type: Types.ObjectId, ref: "User", required: false}],
     comments: [{
         author: {type: Types.ObjectId, ref: "User", required: true},
         content_text: {type: String, required: true},

@@ -8,7 +8,8 @@ const {
     deletePostSchema,
     savePostSchema,
     getPostsSchema,
-    commentsSchema
+    commentsSchema,
+    likePostSchema
 } = require('../middlewares/validation/schemes')
 
 const uploadMiddleware = require('../middlewares/upload.middleware')
@@ -29,6 +30,9 @@ const unsavePostController = require('../controllers/posts/unsavePost.controller
 const doCommentController = require('../controllers/posts/doComments.controller')
 const getCommentsController = require('../controllers/posts/getComments.controller')
 const getCategoriesController = require('../controllers/posts/getCategories.controller')
+const likePostController = require('../controllers/posts/likePost.controller')
+const unlikePostController = require('../controllers/posts/unlikePost.controller')
+
 
 router.get(
     '/',
@@ -101,5 +105,21 @@ router.delete(
     validateMiddleware(savePostSchema),
     unsavePostController
 )
+
+router.post(
+    '/:id/like',
+    authMiddleware,
+    validateMiddleware(likePostSchema),
+    likePostController
+)
+
+router.delete(
+    '/:id/like',
+    authMiddleware,
+    validateMiddleware(likePostSchema),
+    unlikePostController
+)
+
+
 
 module.exports = router

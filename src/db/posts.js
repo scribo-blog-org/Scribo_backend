@@ -88,10 +88,56 @@ async function deletePostById(id) {
     }
 }
 
+async function doLikeToPost(user_id, post_id) {
+    const result = await Post.findOneAndUpdate(
+        { _id: post_id },
+        { $push: { likes: user_id }},
+        { new: true }
+    );
+
+    if(!result) {
+        return {
+            status: false,
+            message: "This post doesn`t exists",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success liked post",
+        data: result
+    }
+}
+
+async function doUnlikePost(user_id, post_id) {
+    const result = await Post.findOneAndUpdate(
+        { _id: post_id },
+        { $pull: { likes: user_id }},
+        { new: true }
+    );
+
+    if(!result) {
+        return {
+            status: false,
+            message: "This post doesn`t exists",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success unliked post",
+        data: result
+    }
+}
+
 module.exports = {
     getPostsByQuery,
     getPostByQuery,
     createNewPost,
     updatePostById,
     deletePostById,
+    doLikeToPost,
+    doUnlikePost
 }

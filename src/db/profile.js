@@ -87,7 +87,7 @@ async function readNotificationsByUserId(user_id) {
 }
 
 async function addNotificationToUserById(user_id, notification) {
-    notification_types = ["follow", "unfollow", "comment_post", "reply_comment"]
+    notification_types = ["follow", "unfollow", "comment_post", "reply_comment", "like_post"]
 
     if(!notification || !notification.type || !notification_types.includes(notification.type)) {
         throw new Error(`Incorrect type of notification!\nnotification: ${JSON.stringify(notification, null, 2)}`)
