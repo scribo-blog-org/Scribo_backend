@@ -114,6 +114,10 @@ const savePostSchema = new Schema()
     .required('id', { source: 'params' })
     .build();
 
+const likePostSchema = new Schema()
+    .required('id', { source: 'params' })
+    .build();
+
 const getUserByNickNameSchema = new Schema()
     .required('nick_name', { source: 'params' })
     .build();
@@ -153,5 +157,6 @@ module.exports = {
     getUsersSchema,
     followSchema,
     getPostsSchema,
-    commentsSchema
+    commentsSchema,
+    likePostSchema
 }

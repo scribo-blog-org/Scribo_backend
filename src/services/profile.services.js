@@ -42,15 +42,6 @@ async function updateProfile(profile, data) {
     }
 
     const result = await updateProfileById(profile._id, data)
-    
-    global.Logger.log({
-        type: "update_profile",
-        message: `User ${profile.nick_name} updated their profile`,
-        data: {
-            user: profile._id,
-            updates: data
-        }
-    })
 
     return {
         status: true,
