@@ -1,7 +1,7 @@
 const { deleteFile } = require("./aws.services")
 
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
-const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnLikePost } = require('../db/posts')
+const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnlikePost } = require('../db/posts')
 const { getAllCategories, createNewCategory } = require('../db/category')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
@@ -501,7 +501,7 @@ async function likePost(profile, post_id) {
     }
 }
 
-async function unLikePost(profile, post_id) {
+async function unlikePost(profile, post_id) {
     if(!profile || !post_id) {
         throw new AppError({ message: "Missing required fields!" })
     }
@@ -516,7 +516,7 @@ async function unLikePost(profile, post_id) {
         throw new ConflictError({ message: "Post is not liked!" })
     }
 
-    const result = await doUnLikePost(profile._id, post_id)
+    const result = await doUnlikePost(profile._id, post_id)
 
     return {
         status: true,
@@ -537,5 +537,5 @@ module.exports = {
     getComments,
     getCategories,
     likePost,
-    unLikePost
+    unlikePost
 }

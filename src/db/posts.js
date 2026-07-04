@@ -110,7 +110,7 @@ async function doLikeToPost(user_id, post_id) {
     }
 }
 
-async function doUnLikePost(user_id, post_id) {
+async function doUnlikePost(user_id, post_id) {
     const result = await Post.findOneAndUpdate(
         { _id: post_id },
         { $pull: { likes: user_id }},
@@ -139,5 +139,5 @@ module.exports = {
     updatePostById,
     deletePostById,
     doLikeToPost,
-    doUnLikePost
+    doUnlikePost
 }

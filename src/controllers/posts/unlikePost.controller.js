@@ -1,8 +1,8 @@
-const { unLikePost } = require("../../services/posts.services")
+const { unlikePost } = require("../../services/posts.services")
 
-const unLikePostController = async (req, res, next) => {
+const unlikePostController = async (req, res, next) => {
     try {
-        const result = await unLikePost(req.profile, req.params.id);
+        const result = await unlikePost(req.profile, req.params.id);
         res.status(200).json(result);
     }
     catch(error) {
@@ -10,4 +10,4 @@ const unLikePostController = async (req, res, next) => {
     }
 }
 
-module.exports = unLikePostController
+module.exports = unlikePostController

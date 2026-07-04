@@ -31,7 +31,7 @@ const doCommentController = require('../controllers/posts/doComments.controller'
 const getCommentsController = require('../controllers/posts/getComments.controller')
 const getCategoriesController = require('../controllers/posts/getCategories.controller')
 const likePostController = require('../controllers/posts/likePost.controller')
-const unLikePostController = require('../controllers/posts/unLikePost.controller')
+const unlikePostController = require('../controllers/posts/unlikePost.controller')
 
 
 router.get(
@@ -117,7 +117,7 @@ router.delete(
     '/:id/like',
     authMiddleware,
     validateMiddleware(likePostSchema),
-    unLikePostController
+    unlikePostController
 )
 
 
