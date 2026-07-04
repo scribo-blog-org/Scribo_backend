@@ -1,7 +1,7 @@
 const { deleteFile } = require("./aws.services")
 
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
-const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById } = require('../db/posts')
+const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnLikePost } = require('../db/posts')
 const { getAllCategories, createNewCategory } = require('../db/category')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
@@ -266,17 +266,6 @@ async function deletePost(id, profile) {
     if(users_with_saved_post.status) {
         for (const target_user of users_with_saved_post.data) {
             const result = await removePostFromSaved(target_user._id, id)
-            if(!result.status) {
-                global.Logger.log({
-                    type: "error",
-                    message: "Error to remove post from saved",
-                    data: {
-                        user_who_deletes_post: profile._id,
-                        target_user: target_user._id,
-                        post_id: new ObjectId(id)
-                    }
-                })
-            }
         }
     }
 
@@ -312,7 +301,7 @@ async function deletePost(id, profile) {
 
     global.Logger.log({
         type: "delete_post",
-        message: `Post has been deleted`,
+        message: `User ${profile.nick_name} deleted post ${post._id}`,
         data: {
             post_id: new ObjectId(id)
         }
@@ -339,15 +328,6 @@ async function savePost(profile, id) {
     }
 
     const result =  await addPostToSaved(profile._id, id) 
-
-    global.Logger.log({
-        type: "save_post",
-        message: `User ${result.data.nick_name} saved post ${id}`,
-        data: {
-            user: result.data._id,
-            post_id: new mongoose.Types.ObjectId(id)
-        }
-    })
     
     return {
         status: true,
@@ -374,15 +354,6 @@ async function unsavePost(profile, id) {
     }
 
     const result = await removePostFromSaved(user.data._id, id)
-
-    global.Logger.log({ 
-        type: "unsave_post",
-        message: `User ${result.data.nick_name} unsaved post ${id}`,
-        data: {
-            user: result.data._id,
-            post_id: new mongoose.Types.ObjectId(id)
-        }
-    })
 
     return {
         status: true,
@@ -500,6 +471,60 @@ async function getCategories() {
     return await getAllCategories();
 }
 
+async function likePost(profile, post_id) {
+    if(!profile || !post_id) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+
+    const post = await getPostByQuery({ "_id": post_id })
+
+    if(!post) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+
+    if(post.data.likes.some((like) => String(like) === String(profile._id))) {
+        throw new ConflictError({ message: "Post is already liked!" })
+    }
+
+    const result = await doLikeToPost(profile._id, post_id)
+
+    const author = await getUserByQuery({ "_id": post.data.author })
+    
+    if(!author.data._id.equals(profile._id)) {
+        await addNotificationToUserById(author.data._id, { type: "like_post", user: profile._id, post: post_id })
+    }
+
+    return {
+        status: true,
+        message: "Success liked post",
+        data: { likes: result.data.likes}
+    }
+}
+
+async function unLikePost(profile, post_id) {
+    if(!profile || !post_id) {
+        throw new AppError({ message: "Missing required fields!" })
+    }
+
+    const post = await getPostByQuery({ "_id": post_id })
+
+    if(!post) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+
+    if(!post.data.likes.some((like) => String(like) === String(profile._id))) {
+        throw new ConflictError({ message: "Post is not liked!" })
+    }
+
+    const result = await doUnLikePost(profile._id, post_id)
+
+    return {
+        status: true,
+        message: "Success unliked post",
+        data: { likes: result.data.likes}
+    }
+}
+
 module.exports = {
     getPosts,
     getPostById,
@@ -510,5 +535,7 @@ module.exports = {
     unsavePost,
     commentPost,
     getComments,
-    getCategories
+    getCategories,
+    likePost,
+    unLikePost
 }

@@ -69,15 +69,6 @@ async function follow(userId, profile) {
     
     const follow = await followToUserById(profile._id, followed_user.data._id)
 
-    global.Logger.log({
-        type: "follow",
-        message: `User ${follow.data.follower.nick_name} followed ${follow.data.followed.nick_name}`,
-        data: {
-            follower: follow.data.follower._id,
-            followed: follow.data.followed._id
-        }
-    })
-
     return {
         status: true,
         message: "Success followed",
@@ -120,16 +111,7 @@ async function unfollow(userId, profile) {
     await addNotificationToUserById(followed_user.data._id, { type: "unfollow", user: profile._id })
 
     const follow = await unfollowToUserById(profile._id, followed_user.data._id)
-
-    global.Logger.log({
-        type: "unfollow",
-        message: `User ${follow.data.follower.nick_name} unfollowed ${follow.data.followed.nick_name}`,
-        data: {
-            follower: follow.data.follower._id,
-            followed: follow.data.followed._id
-        }
-    })
-
+    
     return {
         status: true,
         message: "Success unfollowed",

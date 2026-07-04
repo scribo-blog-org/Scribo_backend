@@ -61,7 +61,6 @@ async function uploadImage(file, type, file_name) {
     }
 
     if (!file_name || typeof file_name !== 'string') {
-        console.log(file_name)
         errors.push('Invalid or missing file_name.');
     }
 
