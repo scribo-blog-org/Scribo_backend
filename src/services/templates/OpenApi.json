@@ -1,0 +1,4062 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Scribo-blog",
+    "version": "3.5.x",
+    "description": "Api documentation for scribo-blog backend."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Check server status",
+        "description": "Returns a simple HTML page indicating that the server is working, along with a link to the API documentation.",
+        "responses": {
+          "200": {
+            "description": "Server is working successfully",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string",
+                  "example": "<p>Server is working\n    You can check api documentation here: </p><a href=\"https://scribo-blog.vercel.app/api\" target=\"_blank\">Api\n    Documentation</a>"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Get OpenAPI documentation specification",
+        "description": "Returns the complete OpenAPI/Swagger JSON document used to render the API documentation interface.",
+        "responses": {
+          "200": {
+            "description": "Success - Returns the full OpenAPI specification in JSON format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The complete OpenAPI 3.0.0 specification object containing all paths, schemas, and components."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Get posts",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "description": "Title of post",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "description": "Id of post",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "description": "Author id of post",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Category of post",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success fetched posts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Success fetched posts"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string",
+                            "example": "697bbed891399a938431316c"
+                          },
+                          "author": {
+                            "type": "string",
+                            "example": "6752048ba8b54c2224d7d30a"
+                          },
+                          "title": {
+                            "type": "string",
+                            "example": "Update v2.1.1 | 29.01.2026"
+                          },
+                          "featured_image": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": null
+                          },
+                          "content_text": {
+                            "type": "string",
+                            "example": "<p><span style=\"white-space: pre-wrap;\">Added text formatting options when creating a post</span></p>..."
+                          },
+                          "category": {
+                            "type": "string",
+                            "example": "Dev"
+                          },
+                          "created_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-01-29T20:11:04.475Z"
+                          },
+                          "__v": {
+                            "type": "integer",
+                            "example": 0
+                          },
+                          "likes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "comments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            }
+                          }
+                        },
+                        "required": ["_id", "author", "title", "content_text", "category", "created_date", "likes", "comments"]
+                      }
+                    }
+                  },
+                  "required": ["status", "message", "data"]
+                },
+                "examples": {
+                  "Default": {
+                    "summary": "Success fetched posts list response",
+                    "value": {
+                      "status": true,
+                      "message": "Success fetched posts",
+                      "data": [
+                        {
+                          "_id": "697bbed891399a938431316c",
+                          "author": "6752048ba8b54c2224d7d30a",
+                          "title": "Update v2.1.1 | 29.01.2026",
+                          "featured_image": null,
+                          "content_text": "<p><span style=\"white-space: pre-wrap;\">Added text formatting options when creating a post</span></p><p><span style=\"white-space: pre-wrap;\">You can check it </span><a href=\"https://scribo-blog.vercel.app/create-post\" rel=\"noreferrer\" class=\"text_editor_link\"><span style=\"white-space: pre-wrap;\">here</span></a></p><p><i><em class=\"text_editor_italic\" style=\"white-space: pre-wrap;\">* Available only if you are administrator</em></i></p>",
+                          "category": "Dev",
+                          "created_date": "2026-01-29T20:11:04.475Z",
+                          "__v": 0,
+                          "likes": [],
+                          "comments": []
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Posts not found",
+            "content": {
+                "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false,
+                        "description": "Indicates failure"
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "There is no posts",
+                        "description": "Error message describing the problem"
+                    },
+                    "data": {
+                        "type": "null",
+                        "example": null,
+                        "description": "No data returned on error"
+                    }
+                    },
+                    "required": ["status", "message", "data"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Create new post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "category": { "type": "string" },
+                  "content_text": { "type": "string" },
+                  "featured_image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Content of the post image"
+                  }
+                },
+                "required": ["title", "content_text", "category"]
+              },
+              "encoding": {
+                "featured_image": {
+                  "contentType": "image/png, image/jpeg, image/svg, image/gif"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of created post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success created post" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "author": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                        "title": { "type": "string", "example": "1" },
+                        "featured_image": { "type": "string", "nullable": true, "example": null },
+                        "content_text": { "type": "string", "example": "1" },
+                        "category": { "type": "string", "example": "117" },
+                        "likes": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": []
+                        },
+                        "_id": { "type": "string", "example": "6a496bf96e1fe9e604359d4e" },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-04T20:24:25.729Z" },
+                        "comments": {
+                          "type": "array",
+                          "items": { "type": "object" },
+                          "example": []
+                        },
+                        "__v": { "type": "integer", "example": 0 }
+                      },
+                      "required": ["_id", "author", "title", "content_text", "category", "created_date", "likes", "comments", "__v"]
+                    }
+                  },
+                  "required": ["status", "message", "data"]
+                },
+                "examples": {
+                  "Success Created": {
+                    "summary": "Успешное создание поста",
+                    "value": {
+                      "status": true,
+                      "message": "Success created post",
+                      "data": {
+                        "author": "661d9b31358cb251f3dc2089",
+                        "title": "1",
+                        "featured_image": null,
+                        "content_text": "1",
+                        "category": "117",
+                        "likes": [],
+                        "_id": "6a496bf96e1fe9e604359d4e",
+                        "created_date": "2026-07-04T20:24:25.729Z",
+                        "comments": [],
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "examples": {
+                  "Invalid Category": {
+                    "summary": "Неверная категория",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "category": {
+                            "message": "Invalid category!",
+                            "data": "test_dev"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/posts/{id}": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Get post by id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of post",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "description": "Should response expand fields (e.g., 'author')",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Posts"],
+        "summary": "Update post by id",
+        "description": "Updates specific fields of an existing post. Requires authentication and ownership (or admin rights).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to update",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "category": { "type": "string" },
+                  "content_text": { "type": "string" },
+                  "featured_image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "New content of the post image if updating"
+                  }
+                }
+              },
+              "encoding": {
+                "featured_image": {
+                  "contentType": "image/png, image/jpeg, image/svg, image/gif"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success updated post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success updated post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "author", "title", "content_text", "category", "created_date", "likes", "comments", "__v"],
+                      "properties": {
+                        "_id": { "type": "string", "example": "6a496f949f6490372623437d" },
+                        "author": { "type": "string", "example": "6752048ba8b54c2224d7d30a" },
+                        "title": { "type": "string", "example": "1" },
+                        "featured_image": { "type": "string", "nullable": true, "example": null },
+                        "content_text": { "type": "string", "example": "1" },
+                        "category": { "type": "string", "example": "117" },
+                        "likes": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-04T20:39:48.393Z" },
+                        "comments": { "type": "array", "items": { "type": "object" }, "example": [] },
+                        "__v": { "type": "integer", "example": 0 }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Update": {
+                    "summary": "Пост успешно обновлен",
+                    "value": {
+                      "status": true,
+                      "message": "Success updated post",
+                      "data": {
+                        "_id": "6a496f949f6490372623437d",
+                        "author": "6752048ba8b54c2224d7d30a",
+                        "title": "1",
+                        "featured_image": null,
+                        "content_text": "1",
+                        "category": "117",
+                        "likes": [],
+                        "created_date": "2026-07-04T20:39:48.393Z",
+                        "comments": [],
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "examples": {
+                  "Invalid Category": {
+                    "summary": "Неверная категория",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "category": {
+                            "message": "Invalid category!",
+                            "data": "test_dev"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Delete post by id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of post",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post successfully deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success deleted post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "author", "title", "content_text", "category", "created_date", "likes", "comments", "__v"],
+                      "properties": {
+                        "_id": { "type": "string", "example": "6a496bf96e1fe9e604359d4e" },
+                        "author": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                        "title": { "type": "string", "example": "1" },
+                        "featured_image": { "type": "string", "nullable": true, "example": null },
+                        "content_text": { "type": "string", "example": "1" },
+                        "category": { "type": "string", "example": "117" },
+                        "likes": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-04T20:24:25.729Z" },
+                        "comments": { "type": "array", "items": { "type": "object" }, "example": [] },
+                        "__v": { "type": "integer", "example": 0 }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Delete": {
+                    "summary": "Пост успешно удален",
+                    "value": {
+                      "status": true,
+                      "message": "Success deleted post",
+                      "data": {
+                        "_id": "6a496bf96e1fe9e604359d4e",
+                        "author": "661d9b31358cb251f3dc2089",
+                        "title": "1",
+                        "featured_image": null,
+                        "content_text": "1",
+                        "category": "117",
+                        "likes": [],
+                        "created_date": "2026-07-04T20:24:25.729Z",
+                        "comments": [],
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{id}/like": {
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Like a post",
+        "description": "Adds the authenticated user's ID to the post's likes array. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to like",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success liked post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success liked post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["likes"],
+                      "properties": {
+                        "likes": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": ["661d9b31358cb251f3dc2089"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Like": {
+                    "summary": "Лайк успешно поставлен",
+                    "value": {
+                      "status": true,
+                      "message": "Success liked post",
+                      "data": {
+                        "likes": [
+                          "661d9b31358cb251f3dc2089"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Post already liked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Already Liked": {
+                    "summary": "Лайк уже был поставлен ранее",
+                    "value": {
+                      "status": false,
+                      "message": "Post is already liked!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Unlike a post",
+        "description": "Removes the authenticated user's ID from the post's likes array. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to unlike",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success unliked post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success unliked post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["likes"],
+                      "properties": {
+                        "likes": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": []
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Unlike": {
+                    "summary": "Лайк успешно убран",
+                    "value": {
+                      "status": true,
+                      "message": "Success unliked post",
+                      "data": {
+                        "likes": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Post is not liked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Not Liked Yet": {
+                    "summary": "Лайк от этого пользователя отсутствует",
+                    "value": {
+                      "status": false,
+                      "message": "Post is not liked yet!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{id}/save": {
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Save post to saved",
+        "description": "Adds a post to the authenticated user's saved posts list. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to save",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success saved post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success saved post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["saved_posts"],
+                      "properties": {
+                        "saved_posts": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": ["6a4972a554ad2bee7b0abec0"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Save": {
+                    "summary": "Пост успешно сохранен",
+                    "value": {
+                      "status": true,
+                      "message": "Success saved post",
+                      "data": {
+                        "saved_posts": [
+                          "6a4972a554ad2bee7b0abec0"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "examples": {
+                  "Invalid ID format": {
+                    "summary": "Неверный формат ID в Params",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "params": {
+                          "id": {
+                            "message": "Incorrect type!",
+                            "data": "6a4972a554ad2bee7b0abec"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Post already saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Already Saved": {
+                    "summary": "Пост уже сохранен ранее",
+                    "value": {
+                      "status": false,
+                      "message": "Post is already in saved posts!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Remove post from saved",
+        "description": "Removes a post from the authenticated user's saved posts list. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to unsave",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success unsaved post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success unsaved post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["saved_posts"],
+                      "properties": {
+                        "saved_posts": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": []
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Unsave": {
+                    "summary": "Пост успешно удален из сохраненных",
+                    "value": {
+                      "status": true,
+                      "message": "Success unsaved post",
+                      "data": {
+                        "saved_posts": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "examples": {
+                  "Invalid ID format": {
+                    "summary": "Неверный формат ID в Params",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "params": {
+                          "id": {
+                            "message": "Incorrect type!",
+                            "data": "6a4972a554ad2bee7b0abec"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Post is not saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Not In Saved": {
+                    "summary": "Пост отсутствует в сохраненных",
+                    "value": {
+                      "status": false,
+                      "message": "Post is not in saved posts!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{id}/comments": {
+      "post": {
+        "tags": ["Comments"],
+        "summary": "Create a comment or reply",
+        "description": "Creates a new comment for the specified post. If 'parent_comment_id' is provided, it acts as a reply to an existing comment.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to comment on",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["comment_text"],
+                "properties": {
+                  "comment_text": {
+                    "type": "string",
+                    "description": "The content of the comment",
+                    "example": "18"
+                  },
+                  "parent_comment_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "ID of the parent comment if this is a reply",
+                    "example": "6a4aa5be5b006ede93289459"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success commented post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success commented post" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "author", "comment_text", "parent_comment_id", "created_date", "__v"],
+                      "properties": {
+                        "_id": { "type": "string", "example": "6a4aa5be5b006ede93289459" },
+                        "author": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                        "comment_text": { "type": "string", "example": "18" },
+                        "post_id": { "type": "string", "example": "6a4972a554ad2bee7b0abec0", "description": "Returned if it is a root comment" },
+                        "parent_comment_id": { "type": "string", "nullable": true, "example": null },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-05T18:43:10.923Z" },
+                        "__v": { "type": "integer", "example": 0 }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Root Comment": {
+                    "summary": "Новый корневой комментарий",
+                    "value": {
+                      "status": true,
+                      "message": "Success commented post",
+                      "data": {
+                        "author": "661d9b31358cb251f3dc2089",
+                        "comment_text": "18",
+                        "post_id": "6a4972a554ad2bee7b0abec0",
+                        "parent_comment_id": null,
+                        "_id": "6a4aa5be5b006ede93289459",
+                        "created_date": "2026-07-05T18:43:10.923Z",
+                        "__v": 0
+                      }
+                    }
+                  },
+                  "Reply Comment": {
+                    "summary": "Ответ на другой комментарий",
+                    "value": {
+                      "status": true,
+                      "message": "Success commented post",
+                      "data": {
+                        "author": "661d9b31358cb251f3dc2089",
+                        "comment_text": "18",
+                        "parent_comment_id": "6a4aa5be5b006ede93289459",
+                        "_id": "6a4aa66168cf9ab238bb313b",
+                        "created_date": "2026-07-05T18:45:53.498Z",
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "examples": {
+                  "Empty Comment": {
+                    "summary": "Пустой текст комментария",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "comment_text": {
+                            "message": "Comment text must be not empty!"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Parent comment or Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Parent Comment Not Found": {
+                    "summary": "Родительский комментарий не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Parent comment not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Comments"],
+        "summary": "Get comments for a post",
+        "description": "Fetches a list of tree-structured comments for a specific post. Supports expanding author details.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id of the post to get comments from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "description": "Fields to expand in the response",
+            "schema": {
+              "type": "string",
+              "enum": ["author"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success fetched comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success fetched comments" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CommentNode"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "With Expand Author": {
+                    "summary": "Комментарии с раскрытым автором (?expand=author)",
+                    "value": {
+                      "status": true,
+                      "message": "Success fetched comments",
+                      "data": [
+                        {
+                          "_id": "6a4aa5be5b006ede93289459",
+                          "author": {
+                            "_id": "661d9b31358cb251f3dc2089",
+                            "nick_name": "Maks",
+                            "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                            "is_verified": true
+                          },
+                          "comment_text": "18",
+                          "post_id": "6a4972a554ad2bee7b0abec0",
+                          "parent_comment_id": null,
+                          "created_date": "2026-07-05T18:43:10.923Z",
+                          "__v": 0,
+                          "replies": [
+                            {
+                              "_id": "6a4aa66168cf9ab238bb313b",
+                              "author": {
+                                "_id": "661d9b31358cb251f3dc2089",
+                                "nick_name": "Maks",
+                                "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                                "is_verified": true
+                              },
+                              "comment_text": "18",
+                              "parent_comment_id": "6a4aa5be5b006ede93289459",
+                              "created_date": "2026-07-05T18:45:53.498Z",
+                              "__v": 0,
+                              "replies": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Without Expand": {
+                    "summary": "Обычный ответ (author в виде ID группы)",
+                    "value": {
+                      "status": true,
+                      "message": "Success fetched comments",
+                      "data": [
+                        {
+                          "_id": "6a4aa5be5b006ede93289459",
+                          "author": "661d9b31358cb251f3dc2089",
+                          "comment_text": "18",
+                          "post_id": "6a4972a554ad2bee7b0abec0",
+                          "parent_comment_id": null,
+                          "created_date": "2026-07-05T18:43:10.923Z",
+                          "__v": 0,
+                          "replies": [
+                            {
+                              "_id": "6a4aa66168cf9ab238bb313b",
+                              "author": "661d9b31358cb251f3dc2089",
+                              "comment_text": "18",
+                              "parent_comment_id": "6a4aa5be5b006ede93289459",
+                              "created_date": "2026-07-05T18:45:53.498Z",
+                              "__v": 0,
+                              "replies": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Empty Comments": {
+                    "summary": "Пост существует, но комментариев нет",
+                    "value": {
+                      "status": true,
+                      "message": "Success fetched comments",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Post Not Found": {
+                    "summary": "Пост не найден",
+                    "value": {
+                      "status": false,
+                      "message": "Post not found!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get all categories",
+        "description": "Fetches a list of all available post categories. Returns an empty array if no categories exist.",
+        "responses": {
+          "200": {
+            "description": "Categories found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Categories found" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["_id", "name", "icon"],
+                        "properties": {
+                          "_id": { "type": "string", "example": "6a450470e0494a229dcdb962" },
+                          "name": { "type": "string", "example": "Dev" },
+                          "icon": { 
+                            "type": "string", 
+                            "nullable": true, 
+                            "example": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/category_icons/dev.svg" 
+                          },
+                          "__v": { "type": "integer", "example": 0 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Found": {
+                    "summary": "Список категорий найден",
+                    "value": {
+                      "status": true,
+                      "message": "Categories found",
+                      "data": [
+                        {
+                          "_id": "6a450470e0494a229dcdb962",
+                          "name": "Dev",
+                          "icon": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/category_icons/dev.svg"
+                        },
+                        {
+                          "_id": "6a4504a5e0494a229dcdb963",
+                          "name": "Новости",
+                          "icon": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/category_icons/news.svg"
+                        },
+                        {
+                          "_id": "6a452d14bff9ecda09d49793",
+                          "name": "117",
+                          "icon": null,
+                          "__v": 0
+                        }
+                      ]
+                    }
+                  },
+                  "Empty Categories": {
+                    "summary": "Категории отсутствуют в базе",
+                    "value": {
+                      "status": true,
+                      "message": "Categories found",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get all users or search users",
+        "description": "Fetches a list of users based on optional filters. Note: fields 'email' and 'saved_posts' are completely omitted from the object if their respective public flags are false.",
+        "parameters": [
+          {
+            "name": "nick_name",
+            "in": "query",
+            "required": false,
+            "description": "Nick name of the user",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "_id",
+            "in": "query",
+            "required": false,
+            "description": "Id of the user",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "is_admin",
+            "in": "query",
+            "required": false,
+            "description": "Indicates whether the user has admin privileges",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "is_verified",
+            "in": "query",
+            "required": false,
+            "description": "Indicates whether the user has been verified",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "required": false,
+            "description": "Description of user",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Users found" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Public Flags True": {
+                    "summary": "Флаги публичности включены (поля присутствуют)",
+                    "description": "Пример, когда флагам выставлено true, и поля email и saved_posts отдаются бэкендом.",
+                    "value": {
+                      "status": true,
+                      "message": "Users found",
+                      "data": [
+                        {
+                          "_id": "661d9b31358cb251f3dc2089",
+                          "nick_name": "Dev",
+                          "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                          "created_date": "2024-04-15T21:12:15.999Z",
+                          "is_admin": true,
+                          "is_verified": true,
+                          "description": "Hopium",
+                          "followers": ["69725a3e34e375df8a549eb0"],
+                          "follows": ["6752048ba8b54c2224d7d30a"],
+                          "is_email_public": true,
+                          "email": "scribo.blog.dev@gmail.com",
+                          "is_saved_posts_public": true,
+                          "saved_posts": ["6724d18ab4510f88257144f5"],
+                          "__v": 0
+                        }
+                      ]
+                    }
+                  },
+                  "Public Flags False": {
+                    "summary": "Флаги публичности выключены (поля вырезаны)",
+                    "description": "Тот же юзер, но с флагами false. Поля email и saved_posts полностью исключены из структуры JSON.",
+                    "value": {
+                      "status": true,
+                      "message": "Users found",
+                      "data": [
+                        {
+                          "_id": "661d9b31358cb251f3dc2089",
+                          "nick_name": "Maks",
+                          "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                          "created_date": "2024-04-15T21:12:15.999Z",
+                          "is_admin": true,
+                          "is_verified": true,
+                          "description": "Hopium",
+                          "followers": ["69725a3e34e375df8a549eb0"],
+                          "follows": ["6752048ba8b54c2224d7d30a"],
+                          "is_email_public": false,
+                          "is_saved_posts_public": false,
+                          "__v": 0
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Users not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Not Found": {
+                    "summary": "Пользователи не найдены",
+                    "value": {
+                      "status": false,
+                      "message": "Users not found",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{nick_name}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user by nick name",
+        "description": "Fetches a single user object by their unique nickname. Fields 'email' and 'saved_posts' will be omitted if their public visibility flags are set to false.",
+        "parameters": [
+          {
+            "name": "nick_name",
+            "in": "path",
+            "required": true,
+            "description": "Nick name of the user",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "User found" },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                },
+                "examples": {
+                  "User Found (Public)": {
+                    "summary": "Пользователь найден (данные публичны)",
+                    "value": {
+                      "status": true,
+                      "message": "User found",
+                      "data": {
+                        "_id": "661d9b31358cb251f3dc2089",
+                        "nick_name": "Maks",
+                        "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                        "created_date": "2024-04-15T21:12:15.999Z",
+                        "is_admin": true,
+                        "saved_posts": [],
+                        "__v": 0,
+                        "is_verified": true,
+                        "description": "Hopium",
+                        "follows": [
+                          "6a1d811ac07df136ade435bb",
+                          "6752048ba8b54c2224d7d30a",
+                          "66201abf9a28c513e7f3ded3"
+                        ],
+                        "followers": [
+                          "69725a3e34e375df8a549eb0",
+                          "6a1d811ac07df136ade435bb"
+                        ],
+                        "email": "m.o.kosianchuk@student.khai.edu",
+                        "is_email_public": true,
+                        "is_saved_posts_public": true
+                      }
+                    }
+                  },
+                  "User Found (Private)": {
+                    "summary": "Пользователь найден (данные скрыты)",
+                    "description": "Поля email и saved_posts полностью вырезаны, так как соответствующие флаги равны false.",
+                    "value": {
+                      "status": true,
+                      "message": "User found",
+                      "data": {
+                        "_id": "661d9b31358cb251f3dc2089",
+                        "nick_name": "Maks",
+                        "avatar": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg",
+                        "created_date": "2024-04-15T21:12:15.999Z",
+                        "is_admin": true,
+                        "__v": 0,
+                        "is_verified": true,
+                        "description": "Hopium",
+                        "follows": [
+                          "6a1d811ac07df136ade435bb"
+                        ],
+                        "followers": [
+                          "69725a3e34e375df8a549eb0"
+                        ],
+                        "is_email_public": false,
+                        "is_saved_posts_public": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - invalid input length/format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Incorrect nick_name": {
+                    "summary": "Слишком короткий nick_name",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields",
+                      "data": null,
+                      "errors": {
+                        "params": {
+                          "nick_name": {
+                            "message": "Nick name must be longer than 3 characters!",
+                            "data": "1"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Not Found": {
+                    "summary": "Пользователь не найден",
+                    "value": {
+                      "status": false,
+                      "message": "User not found",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/follow": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Follow a user",
+        "description": "Allows the authenticated user to follow another user by their ID. Updates both users' follows/followers arrays. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the user to follow",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success followed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success followed" },
+                    "data": {
+                      "type": "object",
+                      "required": ["follower", "followed"],
+                      "properties": {
+                        "follower": {
+                          "type": "object",
+                          "required": ["id", "nick_name", "follows", "followers"],
+                          "properties": {
+                            "id": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                            "nick_name": { "type": "string", "example": "Maks" },
+                            "follows": { "type": "array", "items": { "type": "string" }, "example": ["6a1d811ac07df136ade435bb", "6752048ba8b54c2224d7d30a"] },
+                            "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0"] }
+                          }
+                        },
+                        "followed": {
+                          "type": "object",
+                          "required": ["id", "nick_name", "follows", "followers"],
+                          "properties": {
+                            "id": { "type": "string", "example": "6752048ba8b54c2224d7d30a" },
+                            "nick_name": { "type": "string", "example": "Dev" },
+                            "follows": { "type": "array", "items": { "type": "string" }, "example": ["661d9b31358cb251f3dc2089"] },
+                            "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0", "661d9b31358cb251f3dc2089"] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Follow": {
+                    "summary": "Успешная подписка",
+                    "value": {
+                      "status": true,
+                      "message": "Success followed",
+                      "data": {
+                        "follower": {
+                          "id": "661d9b31358cb251f3dc2089",
+                          "nick_name": "Maks",
+                          "follows": [
+                            "6a1d811ac07df136ade435bb",
+                            "66201abf9a28c513e7f3ded3",
+                            "69725a3e34e375df8a549eb0",
+                            "66420d0e4377d76053be8f34",
+                            "6752048ba8b54c2224d7d30a"
+                          ],
+                          "followers": [
+                            "69725a3e34e375df8a549eb0",
+                            "6a1d811ac07df136ade435bb",
+                            "66201abf9a28c513e7f3ded3",
+                            "6752048ba8b54c2224d7d30a"
+                          ]
+                        },
+                        "followed": {
+                          "id": "6752048ba8b54c2224d7d30a",
+                          "nick_name": "Dev",
+                          "follows": [
+                            "661d9b31358cb251f3dc2089"
+                          ],
+                          "followers": [
+                            "69725a3e34e375df8a549eb0",
+                            "66201abf9a28c513e7f3ded3",
+                            "661d9b31358cb251f3dc2089"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error in path params",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid ID Format": {
+                    "summary": "Некорректный формат ID",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "params": {
+                          "id": {
+                            "message": "Incorrect type!",
+                            "data": "1в"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "User Not Found": {
+                    "summary": "Пользователь не найден",
+                    "value": {
+                      "status": false,
+                      "message": "User not found",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - already following or trying to follow yourself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Already Following": {
+                    "summary": "Уже подписан",
+                    "value": {
+                      "status": false,
+                      "message": "You are already following this user!",
+                      "data": null
+                    }
+                  },
+                  "Follow Yourself": {
+                    "summary": "Подписка на самого себя",
+                    "value": {
+                      "status": false,
+                      "message": "You cannot follow yourself!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Unfollow a user",
+        "description": "Allows the authenticated user to unfollow another user by their ID. Removes IDs from both users' follows/followers arrays. Requires authorization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the user to unfollow",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success unfollowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success unfollowed" },
+                    "data": {
+                      "type": "object",
+                      "required": ["follower", "followed"],
+                      "properties": {
+                        "follower": {
+                          "type": "object",
+                          "required": ["id", "nick_name", "follows", "followers"],
+                          "properties": {
+                            "id": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                            "nick_name": { "type": "string", "example": "Maks" },
+                            "follows": { "type": "array", "items": { "type": "string" }, "example": ["6a1d811ac07df136ade435bb"] },
+                            "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0"] }
+                          }
+                        },
+                        "followed": {
+                          "type": "object",
+                          "required": ["id", "nick_name", "follows", "followers"],
+                          "properties": {
+                            "id": { "type": "string", "example": "6752048ba8b54c2224d7d30a" },
+                            "nick_name": { "type": "string", "example": "Dev" },
+                            "follows": { "type": "array", "items": { "type": "string" }, "example": [] },
+                            "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0"] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Unfollow": {
+                    "summary": "Успешная отписка",
+                    "value": {
+                      "status": true,
+                      "message": "Success unfollowed",
+                      "data": {
+                        "follower": {
+                          "id": "661d9b31358cb251f3dc2089",
+                          "nick_name": "Maks",
+                          "follows": [
+                            "6a1d811ac07df136ade435bb",
+                            "66201abf9a28c513e7f3ded3",
+                            "69725a3e34e375df8a549eb0",
+                            "66420d0e4377d76053be8f34"
+                          ],
+                          "followers": [
+                            "69725a3e34e375df8a549eb0",
+                            "6a1d811ac07df136ade435bb",
+                            "66201abf9a28c513e7f3ded3"
+                          ]
+                        },
+                        "followed": {
+                          "id": "6752048ba8b54c2224d7d30a",
+                          "nick_name": "Dev",
+                          "follows": [
+                            "661d9b31358cb251f3dc2089"
+                          ],
+                          "followers": [
+                            "69725a3e34e375df8a549eb0",
+                            "66201abf9a28c513e7f3ded3"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error in path params",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid ID Format": {
+                    "summary": "Некорректный формат ID",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "params": {
+                          "id": {
+                            "message": "Incorrect type!",
+                            "data": "1в"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Неавторизованный запрос",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "User Not Found": {
+                    "summary": "Пользователь не найден",
+                    "value": {
+                      "status": false,
+                      "message": "User not found",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - not following this user or trying to unfollow yourself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Not Following": {
+                    "summary": "Вы не подписаны на этого пользователя",
+                    "value": {
+                      "status": false,
+                      "message": "You are not following this user!",
+                      "data": null
+                    }
+                  },
+                  "Unfollow Yourself": {
+                    "summary": "Попытка отписаться от себя",
+                    "value": {
+                      "status": false,
+                      "message": "You cannot unfollow yourself!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login/username": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login by username",
+        "description": "Authenticates a user using their username and password, returning a JWT token upon success.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user_name", "password"],
+                "properties": {
+                  "user_name": {
+                    "type": "string",
+                    "description": "The username of the user",
+                    "example": "Maks"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "The password of the user",
+                    "example": "123123123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Authorized" },
+                    "data": {
+                      "type": "object",
+                      "required": ["token"],
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "description": "JWT authentication token",
+                          "example": "TOKEN"
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Login": {
+                    "summary": "Успешная авторизация",
+                    "value": {
+                      "status": true,
+                      "message": "Authorized",
+                      "data": {
+                        "token": "TOKEN"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error in request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Short Password": {
+                    "summary": "Короткий пароль",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "password": {
+                            "message": "Passowrd must be longer than 7 characters!"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Invalid Credentials": {
+                    "summary": "Неверный логин или пароль",
+                    "value": {
+                      "status": false,
+                      "message": "Invalid password or login",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login/google": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login via Google",
+        "description": "Authenticates a user using a Google OAuth token. Returns a JWT token upon successful authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["google_token"],
+                "properties": {
+                  "google_token": {
+                    "type": "string",
+                    "description": "The OAuth2 token obtained from Google Client SDK",
+                    "example": "TOKEN"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Authorized" },
+                    "data": {
+                      "type": "object",
+                      "required": ["token"],
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "description": "JWT authentication token for the application",
+                          "example": "TOKEN"
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Login": {
+                    "summary": "Успешная авторизация через Google",
+                    "value": {
+                      "status": true,
+                      "message": "Authorized",
+                      "data": {
+                        "token": "TOKEN"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - invalid Google token or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid Google Token": {
+                    "summary": "Невалидный Google токен",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "google_token": {
+                            "message": "Google token is invalid",
+                            "data": "TOKEN"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/email": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register via email confirmation",
+        "description": "Registers a new user using an email address, verification code, nickname, and password via form-data.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "email_code", "nick_name", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The user's email address",
+                    "example": "maksim28925@gmail.com"
+                  },
+                  "email_code": {
+                    "type": "string",
+                    "description": "The verification code sent to the email",
+                    "example": "706540"
+                  },
+                  "nick_name": {
+                    "type": "string",
+                    "description": "Desired unique nickname",
+                    "example": "test"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "User password",
+                    "example": "123123123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success registered" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "nick_name", "email", "password", "is_admin", "is_verified", "is_email_public", "is_saved_posts_public", "saved_posts", "follows", "followers", "created_date"],
+                      "properties": {
+                        "nick_name": { "type": "string", "example": "Maks28925" },
+                        "password": { "type": "string", "example": "$2a$10$8OgWT0l6PcqHNAOnxGVMVO/e1tk/azuEMECEQZz5fn5I8XFUe7CNm" },
+                        "email": { "type": "string", "format": "email", "example": "maksim28925@gmail.com" },
+                        "avatar": { "type": "string", "nullable": true, "example": null },
+                        "is_admin": { "type": "boolean", "example": false },
+                        "is_verified": { "type": "boolean", "example": false },
+                        "is_email_public": { "type": "boolean", "example": true },
+                        "is_saved_posts_public": { "type": "boolean", "example": true },
+                        "saved_posts": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "follows": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "followers": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "_id": { "type": "string", "example": "6a4ab6866186bda4d78ba295" },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-05T19:54:46.339Z" },
+                        "notifications": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "__v": { "type": "integer", "example": 0 }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Registration": {
+                    "summary": "Успешная регистрация",
+                    "value": {
+                      "status": true,
+                      "message": "Success registered",
+                      "data": {
+                        "nick_name": "Maks28925",
+                        "password": "$2a$10$8OgWT0l6PcqHNAOnxGVMVO/e1tk/azuEMECEQZz5fn5I8XFUe7CNm",
+                        "email": "maksim28925@gmail.com",
+                        "avatar": null,
+                        "is_admin": false,
+                        "is_verified": false,
+                        "is_email_public": true,
+                        "is_saved_posts_public": true,
+                        "saved_posts": [],
+                        "follows": [],
+                        "followers": [],
+                        "_id": "6a4ab6866186bda4d78ba295",
+                        "created_date": "2026-07-05T19:54:46.339Z",
+                        "notifications": [],
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation or token error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid Google Token": {
+                    "summary": "Невалидный Google токен",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "googleToken": {
+                            "message": "Google token is invalid",
+                            "data": "TOKEN"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Invalid Fields": {
+                    "summary": "Невалидные данные пользователя",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "password": {
+                            "message": "Passowrd must be longer than 7 characters!",
+                            "data": "2"
+                          },
+                          "nick_name": {
+                            "message": "Nick name must be longer than 3 characters!",
+                            "data": "1"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - user data already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Email Exists": {
+                    "summary": "Email уже занят",
+                    "value": {
+                      "status": false,
+                      "message": "User with this email is exists",
+                      "data": null
+                    }
+                  },
+                  "Nickname Exists": {
+                    "summary": "Nick name уже занят",
+                    "value": {
+                      "status": false,
+                      "message": "User with this nick name is exists",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/google": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register via Google OAuth",
+        "description": "Registers a new user using a Google OAuth token, password, email, and nickname via form-data.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "google_token", "nick_name"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The user's email address",
+                    "example": "maksim28925@gmail.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "User password",
+                    "example": "123123123"
+                  },
+                  "google_token": {
+                    "type": "string",
+                    "description": "The OAuth2 token obtained from Google",
+                    "example": "TOKEN"
+                  },
+                  "nick_name": {
+                    "type": "string",
+                    "description": "Desired unique nickname",
+                    "example": "test"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success registered" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "nick_name", "email", "password", "is_admin", "is_verified", "is_email_public", "is_saved_posts_public", "saved_posts", "follows", "followers", "created_date"],
+                      "properties": {
+                        "nick_name": { "type": "string", "example": "test" },
+                        "password": { "type": "string", "example": "$2a$10$fQ3wElbg0GF2YDxOVP0cQOIpwwSzo5BzONfTlMKlAte6KpQMjSYhW" },
+                        "email": { "type": "string", "format": "email", "example": "maksim28925@gmail.com" },
+                        "avatar": { "type": "string", "nullable": true, "example": null },
+                        "is_admin": { "type": "boolean", "example": false },
+                        "is_verified": { "type": "boolean", "example": false },
+                        "is_email_public": { "type": "boolean", "example": true },
+                        "is_saved_posts_public": { "type": "boolean", "example": true },
+                        "saved_posts": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "follows": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "followers": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "_id": { "type": "string", "example": "6a4ab7889972ac590693fe06" },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-07-05T19:59:04.468Z" },
+                        "notifications": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "__v": { "type": "integer", "example": 0 }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Success Registration": {
+                    "summary": "Успешная регистрация",
+                    "value": {
+                      "status": true,
+                      "message": "Success registered",
+                      "data": {
+                        "nick_name": "test",
+                        "password": "$2a$10$fQ3wElbg0GF2YDxOVP0cQOIpwwSzo5BzONfTlMKlAte6KpQMjSYhW",
+                        "email": "maksim28925@gmail.com",
+                        "avatar": null,
+                        "is_admin": false,
+                        "is_verified": false,
+                        "is_email_public": true,
+                        "is_saved_posts_public": true,
+                        "saved_posts": [],
+                        "follows": [],
+                        "followers": [],
+                        "_id": "6a4ab7889972ac590693fe06",
+                        "created_date": "2026-07-05T19:59:04.468Z",
+                        "notifications": [],
+                        "__v": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation or token error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid Google Token": {
+                    "summary": "Невалидный Google токен",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "googleToken": {
+                            "message": "Google token is invalid",
+                            "data": "TOKEN"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Invalid Fields": {
+                    "summary": "Невалидные данные пользователя",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "password": {
+                            "message": "Passowrd must be longer than 7 characters!",
+                            "data": "2"
+                          },
+                          "nick_name": {
+                            "message": "Nick name must be longer than 3 characters!",
+                            "data": "1"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - user data already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Email Exists": {
+                    "summary": "Email уже занят",
+                    "value": {
+                      "status": false,
+                      "message": "User with this email is exists",
+                      "data": null
+                    }
+                  },
+                  "Nickname Exists": {
+                    "summary": "Nick name уже занят",
+                    "value": {
+                      "status": false,
+                      "message": "User with this nick name is exists",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verification/google": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Verify Google token",
+        "description": "Verifies a Google OAuth token and checks if the associated email is already registered in the system.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["google_token"],
+                "properties": {
+                  "google_token": {
+                    "type": "string",
+                    "description": "The OAuth2 token obtained from Google to verify",
+                    "example": "TOKEN"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Google token is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Google token is valid" },
+                    "data": {
+                      "type": "object",
+                      "required": ["email", "is_registered"],
+                      "properties": {
+                        "email": { "type": "string", "format": "email", "example": "mckos2005@gmail.com" },
+                        "is_registered": { "type": "boolean", "example": true }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Valid Token": {
+                    "summary": "Токен валиден",
+                    "value": {
+                      "status": true,
+                      "message": "Google token is valid",
+                      "data": {
+                        "email": "scribo@gmail.com",
+                        "is_registered": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation or token error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Invalid Google Token": {
+                    "summary": "Невалидный Google токен",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "google_token": {
+                            "message": "Google token is invalid",
+                            "data": "TOKEN"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Missing Token": {
+                    "summary": "Токен не передан",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "google_token": {
+                            "message": "Missing token!"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verification/email/confirm": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Confirm email verification code",
+        "description": "Verifies the confirmation code sent to the user's email address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "email_code"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The email address being verified",
+                    "example": "maksim28925@gmail.com"
+                  },
+                  "email_code": {
+                    "type": "string",
+                    "description": "The verification code received by the user",
+                    "example": "800503"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully confirmed email verification code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Successfully confirmed email verification code!" },
+                    "data": { "type": "null", "example": null }
+                  }
+                },
+                "examples": {
+                  "Success Confirmation": {
+                    "summary": "Код успешно подтвержден",
+                    "value": {
+                      "status": true,
+                      "message": "Successfully confirmed email verification code!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error or expired/invalid code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Code Not Initiated": {
+                    "summary": "Код не запрашивался",
+                    "value": {
+                      "status": false,
+                      "message": "Verification code is not initiated!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "email": {
+                            "message": "No pending confirmation found for this email address. Please request a new code!",
+                            "data": "maksim28925@gmail.com"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Invalid Code": {
+                    "summary": "Неверный код",
+                    "value": {
+                      "status": false,
+                      "message": "Invalid verification code!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "email_code": {
+                            "message": "Invalid verification code!",
+                            "data": "800503"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verification/email/": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Send email verification code",
+        "description": "Generates and sends a verification code to the specified email address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The email address to send the verification code to",
+                    "example": "maksim28925@gmail.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification code sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Verification code sent to email!" },
+                    "data": { "type": "null", "example": null }
+                  }
+                },
+                "examples": {
+                  "Code Sent": {
+                    "summary": "Код успешно отправлен",
+                    "value": {
+                      "status": true,
+                      "message": "Verification code sent to email!",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error in request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Incorrect Email": {
+                    "summary": "Некорректный формат email",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "email": {
+                            "message": "Incorrect email!",
+                            "data": "maksim28925"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Missing Email": {
+                    "summary": "Email не передан",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "email": {
+                            "message": "Missing email!",
+                            "data": ""
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Get current user profile",
+        "description": "Retrieves the profile details of the currently authenticated user, including notifications, follows, and settings.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success authorized" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "nick_name", "email", "description", "avatar", "is_admin", "is_verified", "saved_posts", "follows", "followers", "created_date", "notifications", "is_email_public", "is_saved_posts_public"],
+                      "properties": {
+                        "_id": { "type": "string", "example": "69725a3e34e375df8a549eb0" },
+                        "nick_name": { "type": "string", "example": "Maksim" },
+                        "email": { "type": "string", "format": "email", "example": "mckos2005@gmail.com" },
+                        "description": { "type": "string", "example": "" },
+                        "avatar": { "type": "string", "nullable": true, "example": null },
+                        "is_admin": { "type": "boolean", "example": false },
+                        "is_verified": { "type": "boolean", "example": true },
+                        "saved_posts": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "follows": { "type": "array", "items": { "type": "string" }, "example": ["6752048ba8b54c2224d7d30a", "661d9b31358cb251f3dc2089"] },
+                        "followers": { "type": "array", "items": { "type": "string" }, "example": ["66201abf9a28c513e7f3ded3", "661d9b31358cb251f3dc2089"] },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2026-01-22T17:11:26.222Z" },
+                        "notifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["_id", "is_read", "type", "user", "time"],
+                            "properties": {
+                              "is_read": { "type": "boolean", "example": true },
+                              "type": { "type": "string", "enum": ["follow", "unfollow"], "example": "follow" },
+                              "user": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                              "_id": { "type": "string", "example": "69c1e73a42f3c58a44473b44" },
+                              "time": { "type": "string", "format": "date-time", "example": "2026-03-24T01:22:02.343Z" }
+                            }
+                          }
+                        },
+                        "__v": { "type": "integer", "example": 0 },
+                        "is_email_public": { "type": "boolean", "example": true },
+                        "is_saved_posts_public": { "type": "boolean", "example": true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Unauthorized" },
+                    "data": { "type": "null", "example": null }
+                  }
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Пользователь не авторизован",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Profile"],
+        "summary": "Update user profile",
+        "description": "Updates profile fields such as nickname, description, privacy settings, and avatar via form-data. All fields are optional.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nick_name": {
+                    "type": "string",
+                    "description": "New unique nickname (minimum 4 characters).",
+                    "example": "maks1"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Profile bio/description (maximum 60 characters).",
+                    "example": ""
+                  },
+                  "is_email_public": {
+                    "type": "boolean",
+                    "description": "Privacy flag for email visibility.",
+                    "example": true
+                  },
+                  "is_saved_posts_public": {
+                    "type": "boolean",
+                    "description": "Privacy flag for saved posts visibility.",
+                    "example": true
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "User avatar image file. Uploading a valid file sets/replaces the avatar. Sending an empty file, nothing, or null deletes the current avatar and resets it to null."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success updated profile" },
+                    "data": {
+                      "type": "object",
+                      "required": ["_id", "nick_name", "password", "avatar", "created_date", "is_admin", "saved_posts", "is_verified", "description", "follows", "followers", "email", "is_email_public", "is_saved_posts_public"],
+                      "properties": {
+                        "_id": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                        "nick_name": { "type": "string", "example": "maks1" },
+                        "password": { "type": "string", "example": "$2a$10$1N8kYuL0jIPhQVgnuPpF9umPRa8Be3E7K4T61g0lh5dDim5kMhxQy" },
+                        "avatar": { "type": "string", "nullable": true, "example": null },
+                        "created_date": { "type": "string", "format": "date-time", "example": "2024-04-15T21:12:15.999Z" },
+                        "is_admin": { "type": "boolean", "example": true },
+                        "saved_posts": { "type": "array", "items": { "type": "string" }, "example": [] },
+                        "__v": { "type": "integer", "example": 0 },
+                        "is_verified": { "type": "boolean", "example": true },
+                        "description": { "type": "string", "example": "" },
+                        "follows": { "type": "array", "items": { "type": "string" }, "example": ["6a1d811ac07df136ade435bb", "66201abf9a28c513e7f3ded3", "69725a3e34e375df8a549eb0"] },
+                        "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0", "6a1d811ac07df136ade435bb"] },
+                        "email": { "type": "string", "format": "email", "example": "m.o.kosianchuk@student.khai.edu" },
+                        "is_email_public": { "type": "boolean", "example": true },
+                        "is_saved_posts_public": { "type": "boolean", "example": true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation errors in fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data", "errors"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Some errors in your fields!" },
+                    "data": { "type": "null", "example": null },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "message": { "type": "string" },
+                              "data": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Single Boolean Error": {
+                    "summary": "Одиночная ошибка типа данных",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "is_saved_posts_public": {
+                            "message": "Field is_saved_posts_public should be boolean!",
+                            "data": "fdas"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Multiple Validation Errors": {
+                    "summary": "Множественные ошибки валидации",
+                    "value": {
+                      "status": false,
+                      "message": "Some errors in your fields!",
+                      "data": null,
+                      "errors": {
+                        "body": {
+                          "nick_name": {
+                            "message": "Nick name must be longer than 3 characters!",
+                            "data": "1"
+                          },
+                          "description": {
+                            "message": "Description must be longer than 60 characters!",
+                            "data": "dasmlkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkdasmlkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkdasmlkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkdasmlkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+                          },
+                          "is_email_public": {
+                            "message": "Field is_email_public should be boolean!",
+                            "data": "dsa"
+                          },
+                          "is_saved_posts_public": {
+                            "message": "Field is_saved_posts_public should be boolean!",
+                            "data": "ddas"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User is not logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Unauthorized" },
+                    "data": { "type": "null", "example": null }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Nickname is already taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Nick name is already used by another user!" },
+                    "data": { "type": "null", "example": null }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile/notifications": {
+      "patch": {
+        "tags": ["Profile"],
+        "summary": "Mark all notifications as read",
+        "description": "Updates all unread notifications for the currently authenticated user, setting their status to read.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success readed all notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Success readed all notifications" },
+                    "data": {
+                      "type": "object",
+                      "required": ["notifications"],
+                      "properties": {
+                        "notifications": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Notification"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "All Notifications Read": {
+                    "summary": "Уведомления успешно прочитаны",
+                    "value": {
+                      "status": true,
+                      "message": "Success readed all notifications",
+                      "data": {
+                        "notifications": [
+                          {
+                            "is_read": true,
+                            "type": "follow",
+                            "user": "66420d0e4377d76053be8f34",
+                            "_id": "684c939af74b9357aedf4acc",
+                            "time": "2025-06-13T21:09:46.496Z"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User is not logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "message", "data"],
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "message": { "type": "string", "example": "Unauthorized" },
+                    "data": { "type": "null", "example": null }
+                  }
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "summary": "Пользователь не авторизован",
+                    "value": {
+                      "status": false,
+                      "message": "Unauthorized",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "ValidationError": {
+        "description": "Bad Request - validation failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": { "type": "boolean", "example": false },
+                "message": { "type": "string", "example": "Some errors in your fields!" },
+                "data": { "type": "object", "nullable": true, "example": null },
+                "errors": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": ["status", "message", "data", "errors"]
+            },
+            "examples": {
+              "Invalid ID Type": {
+                "summary": "Неверный формат ID в пути (Path)",
+                "value": {
+                  "status": false,
+                  "message": "Some errors in your fields!",
+                  "data": null,
+                  "errors": {
+                    "params": {
+                      "id": {
+                        "message": "Incorrect type!",
+                        "data": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - Missing or invalid token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorBase"
+            },
+            "examples": {
+              "Empty token": {
+                "summary": "Токен не передан",
+                "value": {
+                  "status": false,
+                  "message": "Token is empty!",
+                  "data": null
+                }
+              },
+              "Incorrect token": {
+                "summary": "Невалидный/протухший токен",
+                "value": {
+                  "status": false,
+                  "message": "Incorrect token!",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden - Permission denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorBase"
+            },
+            "example": {
+              "status": false,
+              "message": "This user doesn't have permission to do this action!",
+              "data": null
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorBase"
+            },
+            "example": {
+              "status": false,
+              "message": "Post not found!",
+              "data": null
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorBase": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "data": { "type": "object", "nullable": true, "example": null }
+        },
+        "required": ["status", "message", "data"]
+      },
+      "PostResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "boolean", "example": true },
+          "message": { "type": "string", "example": "Success fetched post" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "_id": { "type": "string" },
+              "author": {
+                "oneOf": [
+                  { "type": "string", "description": "ID автора" },
+                  { "type": "object", "description": "Развернутый объект автора при expand=author" }
+                ]
+              },
+              "title": { "type": "string" },
+              "featured_image": { "type": "string", "nullable": true },
+              "content_text": { "type": "string" },
+              "category": { "type": "string" },
+              "created_date": { "type": "string", "format": "date-time" },
+              "__v": { "type": "integer" },
+              "likes": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "comments": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "boolean" },
+                  "message": { "type": "string" },
+                  "data": {
+                    "type": "array",
+                    "items": { "type": "object" }
+                  }
+                }
+              }
+            },
+            "required": ["_id", "author", "title", "content_text", "category", "created_date"]
+          }
+        },
+        "required": ["status", "message", "data"]
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Some errors in your fields!"
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "errors": {
+            "type": "object",
+            "description": "Объект с описанием ошибок валидации по сегментам (query, body, params)",
+            "properties": {
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["message"]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "data": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": ["status", "message", "data", "errors"],
+        "example": {
+          "status": false,
+          "message": "Some errors in your fields!",
+          "data": null,
+          "errors": {
+            "query": {
+              "ids": {
+                "message": "Incorrect id format in ids query field!",
+                "data": ["1"]
+              }
+            }
+          }
+        }
+      },
+      "CommentNode": {
+        "type": "object",
+        "required": ["_id", "author", "comment_text", "parent_comment_id", "created_date", "replies", "__v"],
+        "properties": {
+          "_id": { "type": "string", "example": "6a4aa5be5b006ede93289459" },
+          "author": {
+            "anyOf": [
+              { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+              {
+                "type": "object",
+                "properties": {
+                  "_id": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+                  "nick_name": { "type": "string", "example": "Maks" },
+                  "avatar": { "type": "string", "example": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg" },
+                  "is_verified": { "type": "boolean", "example": true }
+                }
+              }
+            ]
+          },
+          "comment_text": { "type": "string", "example": "18" },
+          "post_id": { "type": "string", "example": "6a4972a554ad2bee7b0abec0" },
+          "parent_comment_id": { "type": "string", "nullable": true, "example": null },
+          "created_date": { "type": "string", "format": "date-time", "example": "2026-07-05T18:43:10.923Z" },
+          "__v": { "type": "integer", "example": 0 },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentNode"
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "_id", "nick_name", "avatar", "created_date", "is_admin", 
+          "saved_posts", "__v", "is_verified", "description", 
+          "follows", "followers", "is_email_public", "is_saved_posts_public"
+        ],
+        "properties": {
+          "_id": { "type": "string", "example": "661d9b31358cb251f3dc2089" },
+          "nick_name": { "type": "string", "example": "Maks" },
+          "avatar": { "type": "string", "nullable": true, "example": "https://scribo-blog.s3.us-east-1.amazonaws.com/src/avatar/661d9b31358cb251f3dc2089.jpeg" },
+          "created_date": { "type": "string", "format": "date-time", "example": "2024-04-15T21:12:15.999Z" },
+          "is_admin": { "type": "boolean", "example": true },
+          "saved_posts": { "type": "array", "items": { "type": "string" }, "example": [] },
+          "__v": { "type": "integer", "example": 0 },
+          "is_verified": { "type": "boolean", "example": true },
+          "description": { "type": "string", "nullable": true, "example": "Hopium" },
+          "follows": { "type": "array", "items": { "type": "string" }, "example": ["6a1d811ac07df136ade435bb"] },
+          "followers": { "type": "array", "items": { "type": "string" }, "example": ["69725a3e34e375df8a549eb0"] },
+          "email": { "type": "string", "nullable": true, "example": "m.o.kosianchuk@student.khai.edu" },
+          "is_email_public": { "type": "boolean", "example": true },
+          "is_saved_posts_public": { "type": "boolean", "example": true }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "required": ["_id", "is_read", "type", "user", "time"],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "684c939af74b9357aedf4acc"
+          },
+          "is_read": {
+            "type": "boolean",
+            "example": true
+          },
+          "type": {
+            "type": "string",
+            "enum": ["follow", "unfollow"],
+            "example": "follow"
+          },
+          "user": {
+            "type": "string",
+            "description": "ID of the user who triggered the notification",
+            "example": "66420d0e4377d76053be8f34"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-06-13T21:09:46.496Z"
+          }
+        }
+      }
+    }
+  }
+}

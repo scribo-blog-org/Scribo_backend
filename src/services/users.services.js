@@ -31,6 +31,10 @@ async function getUsers(params){
 
     const users = await getUsersByQuery(params)
     
+    if(!users.status) {
+        throw new NotFoundError({ message: "Users not found" })
+    }
+
     users.data = users.data.map(user => {
         if(user.is_saved_posts_public === false) delete user.saved_posts
         return user

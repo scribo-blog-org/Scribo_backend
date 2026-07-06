@@ -242,7 +242,7 @@ async function getPostById(id, expand) {
         post.data = await insertAuthorToPost(post.data)
     }
     
-    post.data.comments = await getComments(post.data._id, expand_options.includes("comments") ? "author" : null)
+    post.data.comments = await getComments(post.data._id, expand_options.includes("comments") ? "author" : null).data
 
     return {
         status: true,
@@ -301,7 +301,7 @@ async function deletePost(id, profile) {
 
     global.Logger.log({
         type: "delete_post",
-        message: `User ${profile.nick_name} deleted post ${post._id}`,
+        message: `User ${profile.nick_name} deleted post ${id}`,
         data: {
             post_id: new ObjectId(id)
         }
@@ -375,6 +375,10 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     if(parent_comment_id) {
         result = await addReplyToComment(parent_comment_id, comment_text, profile._id)
         
+        if(result.status !== true) { 
+            throw new NotFoundError({ message: result.message })
+        }
+
         const comment_author = (await getCommentsByQuery({ _id: parent_comment_id })).data[0].author
         
         if(comment_author.toString() !== profile._id.toString()) {
@@ -405,6 +409,12 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
 }
 
 async function getComments(post_id, expand) {
+    const post = await getPostByQuery({ "_id": post_id })
+
+    if(!post.status) {
+        throw new NotFoundError({ message: "Post not found!" })
+    }
+
     let post_comments = await getCommentsByPostId(post_id)
 
     if(!post_comments.status) {
@@ -478,7 +488,7 @@ async function likePost(profile, post_id) {
 
     const post = await getPostByQuery({ "_id": post_id })
 
-    if(!post) {
+    if(!post.status) {
         throw new NotFoundError({ message: "Post not found!" })
     }
 
