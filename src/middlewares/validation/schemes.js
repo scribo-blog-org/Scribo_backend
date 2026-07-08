@@ -139,6 +139,13 @@ const commentsSchema = new Schema()
     .required('comment_text')
     .build();
 
+const editCategorySchema = new Schema()
+    .required('id', { source: 'params' })
+    .optional('name')
+    .optional('icon')
+    .optional('color')
+    .build();
+
 module.exports = {
     loginUsernameSchema,
     loginGoogleSchema,
@@ -158,5 +165,6 @@ module.exports = {
     followSchema,
     getPostsSchema,
     commentsSchema,
-    likePostSchema
+    likePostSchema,
+    editCategorySchema
 }

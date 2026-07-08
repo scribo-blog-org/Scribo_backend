@@ -5,7 +5,6 @@ const checkAdminAccessMiddleware = async (req, res, next) => {
         if(!req.profile || !req.profile.is_admin) {
             throw new ForbiddenError({ message: "This user doesn't have permission to do this action!" })
         }
-
         next()
     }
     catch(error) {

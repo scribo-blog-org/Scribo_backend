@@ -1,23 +1,21 @@
-const BadRequestError = require("../errors/BadRequestError")
-const { getAllCategories } = require ("../db/category.js")
+const NotFoundError = require("../errors/NotFoundError.js")
+const { getCategoryById } = require ("../db/category.js")
 
 const checkIsCategoryExistsMiddleware = async (req, res, next) => {
-    try {
-        const all_categories = await getAllCategories()
+    try{
+
+        let result
         
-        if(!all_categories.status || !all_categories.data.some(cat => cat.name === req.body.category)) {
-            throw new BadRequestError({
-                errors: {
-                    body: {
-                        category: {
-                            message: 'Invalid category!',
-                            data: req.body.category
-                        }
-                    }
-                }
-            })
+        if(req.body.category){
+            result = await getCategoryById(req.body.category)
+        }
+        else {
+            result = await getCategoryById(req.params.id)
         }
 
+        if(!result.status) {
+           throw new NotFoundError({ message: "Category not found" })
+        }
         next()
     }
     catch(error) {

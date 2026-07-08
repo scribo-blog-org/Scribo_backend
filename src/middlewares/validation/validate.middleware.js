@@ -75,12 +75,11 @@ function validate(fields) {
                 }
                 break
             case "category":
-                if(field.value && field.value.length > 60) {
-                    errors = push_to_errors(errors, field.source, { type: "category", data: { message: "Post category must be less then 60 characters!", data: field.value }})
-                    break
+                if(!field.value) {
+                    errors = push_to_errors(errors, field.source, { type: "category", data: { message: "Missing category!", data: field.value }})
                 }
-                if(!field.value || field.value.length < 3) {
-                    errors = push_to_errors(errors, field.source, { type: "category", data: { message: "The post category must be longer than 3 characters!", data: field.value }})
+                if (!mongoose.Types.ObjectId.isValid(field.value)) {
+                    errors = push_to_errors(errors, field.source, { type: "category", data: { message: "Incorrect type!", data: field.value }})
                 }
                 break
             case "password":
@@ -90,8 +89,8 @@ function validate(fields) {
                 }
                 if(field.value.length > 20) {
                     errors = push_to_errors(errors, field.source, { type: "password", data: { message: "Passowrd must be less than 21 characters!", data: field.value }})
+                    break
                 }
-                break
             case "nick_name":
                 if(!field.value || field.value.length < 3) {
                     errors = push_to_errors(errors, field.source, { type: field.type, data: { message: "Nick name must be longer than 3 characters!", data: field.value }})
