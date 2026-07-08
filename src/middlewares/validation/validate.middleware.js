@@ -82,6 +82,31 @@ function validate(fields) {
                     errors = push_to_errors(errors, field.source, { type: "category", data: { message: "Incorrect type!", data: field.value }})
                 }
                 break
+            case "icon":
+                if(!field.value) {
+                    errors = push_to_errors(errors, field.source, { type: "icon", data: { message: "Missing icon!", data: field.value }})
+                }
+                if(!Number.isInteger(field.value)) {
+                    errors = push_to_errors(errors, field.source, { type: "icon", data: { message: "Incorrect type!", data: field.value }})
+                }
+                break
+            case "color":
+                if(!field.value) {
+                    errors = push_to_errors(errors, field.source, { type: "color", data: { message: "Missing color!", data: field.value }})
+                }
+                if(!Number.isInteger(field.value)) {
+                    errors = push_to_errors(errors, field.source, { type: "color", data: { message: "Incorrect type!", data: field.value }})
+                }
+                break
+            case "name":
+                if(!field.value) {
+                    errors = push_to_errors(errors, field.source, { type: "name", data: { message: "Missing name!", data: field.value }})
+                    break
+                }
+                if(field.value.length > 50) {
+                    errors = push_to_errors(errors, field.source, { type: "name", data: { message: "Name must be less than 51 characters!", data: field.value }})
+                }
+                break
             case "password":
                 if(!field.value || field.value.length < 8) {
                     errors = push_to_errors(errors, field.source, { type: "password", data: { message: "Passowrd must be longer than 7 characters!", data: field.value }})
