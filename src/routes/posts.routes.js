@@ -9,7 +9,8 @@ const {
     savePostSchema,
     getPostsSchema,
     commentsSchema,
-    likePostSchema
+    likePostSchema,
+    editCategorySchema
 } = require('../middlewares/validation/schemes')
 
 const uploadMiddleware = require('../middlewares/upload.middleware')
@@ -32,7 +33,7 @@ const getCommentsController = require('../controllers/posts/getComments.controll
 const getCategoriesController = require('../controllers/posts/getCategories.controller')
 const likePostController = require('../controllers/posts/likePost.controller')
 const unlikePostController = require('../controllers/posts/unlikePost.controller')
-
+const editCategoryController = require('../controllers/posts/editCategory.controller')
 
 router.get(
     '/',
@@ -45,6 +46,12 @@ router.get(
     getCategoriesController
 )
 
+router.patch(
+    '/categories/:id',
+    validateMiddleware(editCategorySchema),
+    checkIsCategoryExistsMiddleware,
+    editCategoryController
+)
 router.get(
     '/:id',
     validateMiddleware(getPostByIdSchema),

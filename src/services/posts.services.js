@@ -2,7 +2,7 @@ const { deleteFile } = require("./aws.services")
 
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnlikePost } = require('../db/posts')
-const { getAllCategories, createNewCategory } = require('../db/category')
+const { getAllCategories, getCategoryById, createNewCategory, updateCategoryById } = require('../db/category')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentByPostId } = require('../db/postComments')
@@ -17,6 +17,7 @@ const AppError = require('../errors/AppError');
 const UnAuthorizedError = require('../errors/UnAuthorizedError');
 const ConflictError = require('../errors/ConflictError');
 const BadRequestError = require('../errors/BadRequestError');
+const { LexRuntimeV2 } = require("aws-sdk")
 
 function normalizePostIdsFilter(params = {}) {
     const hasIdsQuery = Object.prototype.hasOwnProperty.call(params, 'ids')
@@ -106,10 +107,6 @@ async function createPost({
     const post_creating_result = await createNewPost(title, content_text, category, profile._id, img_url)
 
     const all_categories = await getAllCategories()
-
-    if(!all_categories.data.some(cat => cat.name === category)) {
-        const create_new_category_result = await createNewCategory(category, null)
-    }
 
     global.Logger.log({
         type: "create_post",
@@ -218,6 +215,14 @@ async function getPosts(params, expand) {
         }
     }
     
+    if(expand_options.includes("category")) {
+        const categories = await getCategories()
+        
+        for(const post of posts.data) {
+            post.category = categories.data.find(cat => cat._id.toString() === post.category.toString())
+        }
+    }
+
     return {
         status: true,
         message: "Success fetched posts",
@@ -243,6 +248,13 @@ async function getPostById(id, expand) {
     }
     
     post.data.comments = await getComments(post.data._id, expand_options.includes("comments") ? "author" : null).data
+
+    if(expand_options.includes("category")) {
+        const category_data = await getCategoryById(post.data.category)
+        if(category_data.status) {
+            post.data.category = category_data.data
+        }
+    }
 
     return {
         status: true,
@@ -478,7 +490,41 @@ async function get_replies(comment_id, expand) {
 }
 
 async function getCategories() {
-    return await getAllCategories();
+    const result = await getAllCategories();
+
+    if(result.status === true) {
+        for(let category of result.data) {
+            const posts = await getPostsByQuery({ category: category._id })
+            if(posts.status){
+                category.posts_count = posts.data.length
+            }
+            else {
+                category.posts_count = 0
+            }
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success fetched categories",
+        data: result.data
+    }
+}
+
+async function editCategory(id, data) {
+    const category = await getCategoryById(id)
+
+    if(!category.status) {
+        throw new NotFoundError({ message: "Category not found!" })
+    }
+
+    let result = await updateCategoryById(id, data)
+
+    if(result.status) {
+        const posts = await getPostsByQuery({ category: id })
+        result.data.posts_count = posts.status ? posts.data.length : 0
+    }
+    return result
 }
 
 async function likePost(profile, post_id) {
@@ -547,5 +593,6 @@ module.exports = {
     getComments,
     getCategories,
     likePost,
-    unlikePost
+    unlikePost,
+    editCategory
 }
