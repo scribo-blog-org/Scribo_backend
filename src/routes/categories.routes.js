@@ -9,7 +9,8 @@ const {
 
 const authMiddleware = require('../middlewares/auth.middleware')
 const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
-const checkIsCategoryExistsMiddleware = require('../middlewares/checkIsCategoryExists.middleware')
+const checkCategoryExistsById = require('../middlewares/checkCategoryExistsById.middleware')
+const checkCategoryExistsByName = require('../middlewares/checkCategoryExistsByName.middleware')
 
 const validateMiddleware = require('../middlewares/validation/validate.middleware')
 
@@ -17,6 +18,7 @@ const getCategoriesController = require('../controllers/categories/getCategories
 const editCategoryController = require('../controllers/categories/editCategory.controller')
 const createCategoryController = require('../controllers/categories/createCategory.controller')
 const deleteCategoryController = require('../controllers/categories/deleteCategory.controller')
+
 
 router.get(
     '/',
@@ -28,7 +30,7 @@ router.patch(
     validateMiddleware(editCategorySchema),
     authMiddleware,
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware(true),
+    checkCategoryExistsById(true),
     editCategoryController
 )
 
@@ -37,7 +39,7 @@ router.post(
     validateMiddleware(createCategorySchema),
     authMiddleware,
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware(false),
+    checkCategoryExistsByName(false),
     createCategoryController
 )
 
@@ -46,7 +48,7 @@ router.delete(
     validateMiddleware(deleteCategorySchema),
     authMiddleware,
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware(true),
+    checkCategoryExistsById(true),
     deleteCategoryController
 )
 

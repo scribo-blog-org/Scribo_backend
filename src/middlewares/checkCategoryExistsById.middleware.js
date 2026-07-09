@@ -2,19 +2,12 @@ const NotFoundError = require("../errors/NotFoundError.js")
 const ConflictError = require("../errors/ConflictError.js")
 const { getCategoryById, getCategoryByName } = require ("../db/category.js")
 
-const checkIsCategoryExistsMiddleware = (shouldExist = true) => {
+const checkCategoryExistsById = (shouldExist = true) => {
     return async (req, res, next) => {
        try {
    
-            let result
-            
-            if(req.body.name){
-                result = await getCategoryByName(req.body.name)
-            }
-            else {
-                result = await getCategoryById(req.params.id)
-            }
-            
+            const result = await getCategoryById(req.params.id)
+        
             if (result.status !== shouldExist) {
                 if (shouldExist) {
                     throw new NotFoundError({ message: "Category not found" })
@@ -31,4 +24,4 @@ const checkIsCategoryExistsMiddleware = (shouldExist = true) => {
    }
 }
 
-module.exports = checkIsCategoryExistsMiddleware
+module.exports = checkCategoryExistsById

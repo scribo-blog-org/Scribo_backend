@@ -1,4 +1,4 @@
-const { getAllCategories, getCategoryById, updateCategoryById, createNewCategory, deleteCategoryById } = require('../db/category')
+const { getAllCategories, getCategoryById, updateCategoryById, createNewCategory, deleteCategoryById, getCategoryByName } = require('../db/category')
 const { getPostsByQuery } = require('../db/posts')
 
 const AppError = require("../errors/AppError")
@@ -33,6 +33,12 @@ async function editCategory(id, data) {
         throw new NotFoundError({ message: "Category not found!" })
     }
 
+    const is_name_exists = await getCategoryByName(data.name)
+
+    if(is_name_exists.status && is_name_exists.data._id.toString() !== id.toString()) {
+        throw new ConflictError({ message: "Category name already exists!" })
+    }
+
     let result = await updateCategoryById(id, data)
 
     if(result.status) {
@@ -43,9 +49,15 @@ async function editCategory(id, data) {
 }
 
 async function createCategory(data) {
-    if(!data.name || !data.icon || !data.color) {
-        throw new AppError({ message: "Name, icon and color are required!" })
+    if(!data.name) {
+        throw new AppError({ message: "Name is required!" })
     }
+    const is_name_exists = await getCategoryByName(data.name)
+
+    if(is_name_exists.status) {
+        throw new ConflictError({ message: "Category name already exists!" })
+    }
+
     const result = await createNewCategory(data.name, data.icon, data.color)
 
     if(result.status) {

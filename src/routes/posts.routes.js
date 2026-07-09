@@ -18,7 +18,7 @@ const validateMiddleware = require('../middlewares/validation/validate.middlewar
 
 const authMiddleware = require('../middlewares/auth.middleware')
 const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
-const checkIsCategoryExistsMiddleware = require('../middlewares/checkIsCategoryExists.middleware')
+const checkCategoryExistsByCategory = require('../middlewares/checkCategoryExistsByCategory.middleware')
 
 const getPostsController = require('../controllers/posts/getPosts.controller')
 const getPostByIdController = require('../controllers/posts/getPostById.controller')
@@ -50,7 +50,7 @@ router.post(
     uploadMiddleware(['featured_image']),
     validateMiddleware(createPostSchema),
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware,
+    checkCategoryExistsByCategory(true),
     createPostController
 )
 
@@ -60,7 +60,7 @@ router.patch(
     uploadMiddleware(['featured_image']),
     validateMiddleware(editPostSchema),
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware,
+    checkCategoryExistsByCategory(true),
     editPostController
 )
 

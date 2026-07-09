@@ -108,11 +108,30 @@ async function deleteCategoryById(id) {
     }
 }
 
+async function getCategoryByName(name) {
+    const category = await Category.findOne({ name: name }).lean()
+
+    if(!category) {
+        return {
+            status: false,
+            message: "Category not found",
+            data: null
+        }
+    }
+    return {
+        status: true,
+        message: "Category found",
+        data: category
+    }
+
+}
+
 module.exports = {
     getAllCategories,
     createNewCategory,
     getCategoryById,
     getCategoryByName,
     updateCategoryById,
-    deleteCategoryById
+    deleteCategoryById,
+    getCategoryByName
 }
