@@ -35,6 +35,23 @@ async function getCategoryById(id) {
         data: category
     }
 }
+async function getCategoryByName(name) {
+    const category = await Category.findOne({ name: name }).lean()
+
+    if(!category) {
+        return {
+            status: false,
+            message: "Category not found",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Category found",
+        data: category
+    }
+}
 
 async function createNewCategory(name, icon, color) {
     if(!name) {
@@ -73,9 +90,48 @@ async function updateCategoryById(id, data) {
     }
 }
 
+async function deleteCategoryById(id) {
+    const deleted_category = await Category.findByIdAndDelete(id).lean()
+
+    if(!deleted_category) {
+        return {
+            status: false,
+            message: "Category not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success deleted category",
+        data: deleted_category
+    }
+}
+
+async function getCategoryByName(name) {
+    const category = await Category.findOne({ name: name }).lean()
+
+    if(!category) {
+        return {
+            status: false,
+            message: "Category not found",
+            data: null
+        }
+    }
+    return {
+        status: true,
+        message: "Category found",
+        data: category
+    }
+
+}
+
 module.exports = {
     getAllCategories,
     createNewCategory,
     getCategoryById,
-    updateCategoryById
+    getCategoryByName,
+    updateCategoryById,
+    deleteCategoryById,
+    getCategoryByName
 }

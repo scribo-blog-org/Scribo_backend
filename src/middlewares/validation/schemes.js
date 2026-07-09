@@ -145,6 +145,16 @@ const editCategorySchema = new Schema()
     .optional('icon')
     .optional('color')
     .build();
+    
+const createCategorySchema = new Schema()
+    .required('name')
+    .required('icon')
+    .required('color')
+    .build();
+
+const deleteCategorySchema = new Schema()
+    .required('id', { source: 'params' })
+    .build();
 
 module.exports = {
     loginUsernameSchema,
@@ -166,5 +176,7 @@ module.exports = {
     getPostsSchema,
     commentsSchema,
     likePostSchema,
-    editCategorySchema
+    editCategorySchema,
+    createCategorySchema,
+    deleteCategorySchema
 }

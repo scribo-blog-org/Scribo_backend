@@ -1,4 +1,4 @@
-const { editCategory } = require("../../services/posts.services.js")
+const { editCategory } = require("../../services/categories.services.js")
 
 const editCategoryController = async (req, res, next) => {
     try {

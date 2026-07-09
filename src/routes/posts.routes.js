@@ -10,7 +10,6 @@ const {
     getPostsSchema,
     commentsSchema,
     likePostSchema,
-    editCategorySchema
 } = require('../middlewares/validation/schemes')
 
 const uploadMiddleware = require('../middlewares/upload.middleware')
@@ -19,7 +18,7 @@ const validateMiddleware = require('../middlewares/validation/validate.middlewar
 
 const authMiddleware = require('../middlewares/auth.middleware')
 const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
-const checkIsCategoryExistsMiddleware = require('../middlewares/checkIsCategoryExists.middleware')
+const checkCategoryExistsByCategory = require('../middlewares/checkCategoryExistsByCategory.middleware')
 
 const getPostsController = require('../controllers/posts/getPosts.controller')
 const getPostByIdController = require('../controllers/posts/getPostById.controller')
@@ -30,10 +29,8 @@ const savePostController = require('../controllers/posts/savePost.controller')
 const unsavePostController = require('../controllers/posts/unsavePost.controller')
 const doCommentController = require('../controllers/posts/doComments.controller')
 const getCommentsController = require('../controllers/posts/getComments.controller')
-const getCategoriesController = require('../controllers/posts/getCategories.controller')
 const likePostController = require('../controllers/posts/likePost.controller')
 const unlikePostController = require('../controllers/posts/unlikePost.controller')
-const editCategoryController = require('../controllers/posts/editCategory.controller')
 
 router.get(
     '/',
@@ -41,17 +38,6 @@ router.get(
     getPostsController
 )
 
-router.get(
-    '/categories',
-    getCategoriesController
-)
-
-router.patch(
-    '/categories/:id',
-    validateMiddleware(editCategorySchema),
-    checkIsCategoryExistsMiddleware,
-    editCategoryController
-)
 router.get(
     '/:id',
     validateMiddleware(getPostByIdSchema),
@@ -64,7 +50,7 @@ router.post(
     uploadMiddleware(['featured_image']),
     validateMiddleware(createPostSchema),
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware,
+    checkCategoryExistsByCategory(true),
     createPostController
 )
 
@@ -74,7 +60,7 @@ router.patch(
     uploadMiddleware(['featured_image']),
     validateMiddleware(editPostSchema),
     checkAdminAccessMiddleware,
-    checkIsCategoryExistsMiddleware,
+    checkCategoryExistsByCategory(true),
     editPostController
 )
 
