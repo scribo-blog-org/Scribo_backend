@@ -2,7 +2,8 @@ const { deleteFile } = require("./aws.services")
 
 const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnlikePost } = require('../db/posts')
-const { getAllCategories, getCategoryById, createNewCategory, updateCategoryById } = require('../db/category')
+const { getCategories } = require('./categories.services.js')
+const { getCategoryById } = require('../db/category.js')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentByPostId } = require('../db/postComments')
@@ -105,8 +106,6 @@ async function createPost({
     }
         
     const post_creating_result = await createNewPost(title, content_text, category, profile._id, img_url)
-
-    const all_categories = await getAllCategories()
 
     global.Logger.log({
         type: "create_post",
@@ -489,44 +488,6 @@ async function get_replies(comment_id, expand) {
     return replies;
 }
 
-async function getCategories() {
-    const result = await getAllCategories();
-
-    if(result.status === true) {
-        for(let category of result.data) {
-            const posts = await getPostsByQuery({ category: category._id })
-            if(posts.status){
-                category.posts_count = posts.data.length
-            }
-            else {
-                category.posts_count = 0
-            }
-        }
-    }
-
-    return {
-        status: true,
-        message: "Success fetched categories",
-        data: result.data
-    }
-}
-
-async function editCategory(id, data) {
-    const category = await getCategoryById(id)
-
-    if(!category.status) {
-        throw new NotFoundError({ message: "Category not found!" })
-    }
-
-    let result = await updateCategoryById(id, data)
-
-    if(result.status) {
-        const posts = await getPostsByQuery({ category: id })
-        result.data.posts_count = posts.status ? posts.data.length : 0
-    }
-    return result
-}
-
 async function likePost(profile, post_id) {
     if(!profile || !post_id) {
         throw new AppError({ message: "Missing required fields!" })
@@ -591,8 +552,6 @@ module.exports = {
     unsavePost,
     commentPost,
     getComments,
-    getCategories,
     likePost,
     unlikePost,
-    editCategory
 }

@@ -1,4 +1,4 @@
-const { getCategories } = require('../../services/posts.services')
+const { getCategories } = require('../../services/categories.services')
 
 const getCategoriesController = async (req, res, next) => {
     try {
