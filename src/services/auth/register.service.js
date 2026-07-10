@@ -64,7 +64,10 @@ async function register({
 
     global.Logger.log({
         type: "register",
-        message: `User ${newUser.data.nick_name} has registered`
+        message: `User ${newUser.data.nick_name} has registered`,
+        data: {
+            user: newUser.data._id
+        }
     })
 
     return {

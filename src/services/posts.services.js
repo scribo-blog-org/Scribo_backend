@@ -155,8 +155,7 @@ async function editPost(id, data, profile) {
         message: `User ${profile.nick_name} updated post ${post._id}`,
         data: {
             user: profile._id,
-            post_id: post._id,
-            updates: data
+            post: result.data._id
         }
     })
 
@@ -269,52 +268,62 @@ async function deletePost(id, profile) {
 
     const result = await deletePostById(id)
 
+
     if(!result.status) {
         throw new NotFoundError({ message: "Post not found!" })
     }
 
     let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) })
+
     if(users_with_saved_post.status) {
         for (const target_user of users_with_saved_post.data) {
             const result = await removePostFromSaved(target_user._id, id)
         }
     }
 
-    const comments = await getComments(new ObjectId(id))
+    try {
+        const comments = await getComments(new ObjectId(id))
 
-    function flattenComments(comments) {
-        const result = [];
-
-        function walk(items) {
-            for (const comment of items) {
-                result.push(comment);
-
-                if (comment.replies?.length) {
-                    walk(comment.replies);
+        function flattenComments(comments) {
+            const result = [];
+    
+            function walk(items) {
+                for (const comment of items) {
+                    result.push(comment);
+    
+                    if (comment.replies?.length) {
+                        walk(comment.replies);
+                    }
                 }
             }
+    
+            walk(comments);
+    
+            return result;
         }
-
-        walk(comments);
-
-        return result;
+    
+        const comments_to_delete = flattenComments(comments.data)
+    
+        for(const comment of comments_to_delete) {
+            const result = await deleteCommentByPostId(comment._id)
+            if(!result.status) {
+                throw new AppError({ message: `Error to delete comment with id ${comment._id} of post ${id}!` })
+            }
+        }
+    }
+    catch(e) {
+        if(e instanceof NotFoundError) {
+        }
     }
 
-    const comments_to_delete = flattenComments(comments.data)
-
-    for(const comment of comments_to_delete) {
-        const result = await deleteCommentByPostId(comment._id)
-        if(!result.status) {
-            throw new AppError({ message: `Error to delete comment with id ${comment._id} of post ${id}!` })
-        }
-    }
     await deleteFile(result.data.featured_image ?? "")
 
     global.Logger.log({
         type: "delete_post",
         message: `User ${profile.nick_name} deleted post ${id}`,
         data: {
-            post_id: new ObjectId(id)
+            post: result.data._id,
+            user: profile._id
         }
     })
 

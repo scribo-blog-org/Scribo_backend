@@ -26,7 +26,7 @@ async function getCategories() {
     }
 }
 
-async function editCategory(id, data) {
+async function editCategory(id, data, profile) {
     const category = await getCategoryById(id)
 
     if(!category.status) {
@@ -45,10 +45,20 @@ async function editCategory(id, data) {
         const posts = await getPostsByQuery({ category: id })
         result.data.posts_count = posts.status ? posts.data.length : 0
     }
+
+    global.Logger.log({
+        type: "update_category",
+        message: `User ${profile.nick_name} updated category`,
+        data: {
+            user: profile._id,
+            category: result.data._id
+        }
+    })
+
     return result
 }
 
-async function createCategory(data) {
+async function createCategory(data, profile) {
     if(!data.name) {
         throw new AppError({ message: "Name is required!" })
     }
@@ -59,8 +69,17 @@ async function createCategory(data) {
     }
 
     const result = await createNewCategory(data.name, data.icon, data.color)
-
+    
     if(result.status) {
+        global.Logger.log({
+            type: "create_category",
+            message: `User ${profile.nick_name} created category`,
+            data: {
+                user: profile._id,
+                category: result.data._id
+            }
+        })
+
         return {
             status: true,
             message: "Category created successfully",
@@ -76,7 +95,7 @@ async function createCategory(data) {
     }
 }
 
-async function deleteCategory(id) {
+async function deleteCategory(id, profile) {
     if(!id) {
         throw new AppError({ message: "Category ID is required!" })
     }
@@ -90,6 +109,15 @@ async function deleteCategory(id) {
     const result = await deleteCategoryById(id)
 
     if(result.status) {
+        global.Logger.log({
+            type: "delete_category",
+            message: `User ${profile.nick_name} deleted category`,
+            data: {
+                user: profile._id,
+                category: id
+            }
+        })
+
         return {
             status: true,
             message: "Category deleted successfully",
