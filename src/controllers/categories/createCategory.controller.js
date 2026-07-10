@@ -6,7 +6,7 @@ const createCategoryController = async (req, res, next) => {
             name: req.body.name,
             icon: req.body.icon,
             color: req.body.color
-        })
+        }, req.profile)
         return res.status(200).json(result)
     }
     catch(error) {
