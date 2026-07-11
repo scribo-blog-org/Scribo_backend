@@ -2,7 +2,7 @@ const NotFoundError = require('../errors/NotFoundError');
 
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentById, getCommentById, deleteCommentsByIds } = require('../db/comments')
 const { getPostByQuery } = require('../db/posts')
-
+const { getUserByQuery } = require('../db/users.db')
 
 async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     if(!post_id || !comment_text || !profile) {
