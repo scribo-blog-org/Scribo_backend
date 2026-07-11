@@ -61,6 +61,24 @@ async function getCommentsByPostId(post_id) {
     }
 }
 
+async function getCommentById(comment_id) {
+    const comment = await postComment.findById(comment_id).lean()
+
+    if(!comment) {
+        return {
+            status: false,
+            message: "Comment not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success get comment",
+        data: comment
+    }
+}
+
 async function getCommentsByQuery(query = {}) {
     const posts = await postComment.find(query).lean()
     
@@ -79,7 +97,7 @@ async function getCommentsByQuery(query = {}) {
     }
 }
 
-async function deleteCommentByPostId(comment_id) {
+async function deleteCommentById(comment_id) {
     const result = await postComment.deleteOne({ _id: comment_id })
 
     if(!result.deletedCount) {
@@ -98,10 +116,30 @@ async function deleteCommentByPostId(comment_id) {
 
 }
 
+async function deleteCommentsByIds(comment_ids) {
+    const result = await postComment.deleteMany({ _id: { $in: comment_ids } }).lean()
+
+    if(!result.deletedCount) {
+        return {
+            status: false,
+            message: "There is no comments to delete!",
+            data: null
+        }
+    }
+    
+    return {
+        status: true,
+        message: "Success deleted comments",
+        data: null
+    }
+}
+
 module.exports = {
     addCommentToPost,
     addReplyToComment,
     getCommentsByPostId,
     getCommentsByQuery,
-    deleteCommentByPostId
+    deleteCommentById,
+    getCommentById,
+    deleteCommentsByIds
 }

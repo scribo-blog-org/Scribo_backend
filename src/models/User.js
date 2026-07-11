@@ -1,5 +1,7 @@
 const {Schema, model, Types} = require('mongoose');
 
+const ROLES = require("../authorization/roles");
+
 let schema = new Schema({
     nick_name: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -8,6 +10,12 @@ let schema = new Schema({
     avatar: { type: String, required: false },
     created_date: { type: Date, required: true, default: Date.now },
     is_admin: { type: Boolean, required: true, default: false },
+    role: {
+        type: String,
+        enum: Object.values(ROLES),
+        default: ROLES.USER,
+        required: true
+    },
     is_verified: { type: Boolean, required: true, default: false },
     is_email_public: { type: Boolean, required: true, default: true },
     is_saved_posts_public: { type: Boolean, required: true, default: true },

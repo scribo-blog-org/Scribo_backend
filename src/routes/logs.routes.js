@@ -1,15 +1,16 @@
 const { Router } = require('express');
+const router = Router()
 
 const getLogsController = require('../controllers/logs/getLogs.controller');
-const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
 const authMiddleware = require('../middlewares/auth.middleware')
 
-const router = Router()
+const LogPolicy = require('../authorization/policies/log.policy')
+
 
 router.get(
     '/',
     authMiddleware,
-    checkAdminAccessMiddleware,
+    LogPolicy.canView,
     getLogsController
 )
 

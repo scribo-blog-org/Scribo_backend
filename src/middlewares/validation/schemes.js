@@ -83,6 +83,10 @@ const getPostByIdSchema = new Schema()
     .optional('expand', { source: 'query' })
     .build();
 
+const deleteCommentSchema = new Schema()
+    .required('id', { source: 'params' })
+    .build();
+
 const createPostSchema = new Schema()
     .required('title')
     .required('content_text')
@@ -178,5 +182,6 @@ module.exports = {
     likePostSchema,
     editCategorySchema,
     createCategorySchema,
-    deleteCategorySchema
+    deleteCategorySchema,
+    deleteCommentSchema
 }

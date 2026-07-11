@@ -3,6 +3,7 @@ const { getPostsByQuery } = require('../db/posts')
 
 const AppError = require("../errors/AppError")
 const ConflictError = require("../errors/ConflictError")
+const NotFoundError = require("../errors/NotFoundError")
 
 async function getCategories() {
     const result = await getAllCategories();
@@ -62,6 +63,7 @@ async function createCategory(data, profile) {
     if(!data.name) {
         throw new AppError({ message: "Name is required!" })
     }
+
     const is_name_exists = await getCategoryByName(data.name)
 
     if(is_name_exists.status) {
@@ -98,6 +100,12 @@ async function createCategory(data, profile) {
 async function deleteCategory(id, profile) {
     if(!id) {
         throw new AppError({ message: "Category ID is required!" })
+    }
+
+    const category = await getCategoryById(id)
+
+    if(!category.status) {
+        throw new NotFoundError({ message: "Category not found!" })
     }
 
     const posts = await getPostsByQuery({ category: id })

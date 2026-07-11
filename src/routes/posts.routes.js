@@ -10,6 +10,7 @@ const {
     getPostsSchema,
     commentsSchema,
     likePostSchema,
+    deleteCommentSchema
 } = require('../middlewares/validation/schemes')
 
 const uploadMiddleware = require('../middlewares/upload.middleware')
@@ -17,8 +18,6 @@ const uploadMiddleware = require('../middlewares/upload.middleware')
 const validateMiddleware = require('../middlewares/validation/validate.middleware')
 
 const authMiddleware = require('../middlewares/auth.middleware')
-const checkAdminAccessMiddleware = require('../middlewares/checkAccess.middleware')
-const checkCategoryExistsByCategory = require('../middlewares/checkCategoryExistsByCategory.middleware')
 
 const getPostsController = require('../controllers/posts/getPosts.controller')
 const getPostByIdController = require('../controllers/posts/getPostById.controller')
@@ -27,10 +26,13 @@ const editPostController = require('../controllers/posts/editPost.controller')
 const deletePostController = require('../controllers/posts/deletePost.controller')
 const savePostController = require('../controllers/posts/savePost.controller')
 const unsavePostController = require('../controllers/posts/unsavePost.controller')
-const doCommentController = require('../controllers/posts/doComments.controller')
-const getCommentsController = require('../controllers/posts/getComments.controller')
+const doCommentController = require('../controllers/comments/doComments.controller')
+const getCommentsController = require('../controllers/comments/getComments.controller')
 const likePostController = require('../controllers/posts/likePost.controller')
 const unlikePostController = require('../controllers/posts/unlikePost.controller')
+
+const PostPolicy = require('../authorization/policies/post.policy')
+
 
 router.get(
     '/',
@@ -49,8 +51,7 @@ router.post(
     authMiddleware,
     uploadMiddleware(['featured_image']),
     validateMiddleware(createPostSchema),
-    checkAdminAccessMiddleware,
-    checkCategoryExistsByCategory(true),
+    PostPolicy.canCreate,
     createPostController
 )
 
@@ -59,8 +60,7 @@ router.patch(
     authMiddleware,
     uploadMiddleware(['featured_image']),
     validateMiddleware(editPostSchema),
-    checkAdminAccessMiddleware,
-    checkCategoryExistsByCategory(true),
+    PostPolicy.canEdit,
     editPostController
 )
 
@@ -80,7 +80,7 @@ router.get(
 router.delete(
     '/:id',
     authMiddleware,
-    checkAdminAccessMiddleware,
+    PostPolicy.canDelete,
     validateMiddleware(deletePostSchema),
     deletePostController
 )
@@ -112,7 +112,6 @@ router.delete(
     validateMiddleware(likePostSchema),
     unlikePostController
 )
-
 
 
 module.exports = router

@@ -35,6 +35,7 @@ async function getCategoryById(id) {
         data: category
     }
 }
+
 async function getCategoryByName(name) {
     const category = await Category.findOne({ name: name }).lean()
 
