@@ -1,4 +1,4 @@
-const { getComments } = require('../../services/posts.services')
+const { getComments } = require('../../services/comments.services')
 
 const getCommentsController = async (req, res, next) => {
     try {

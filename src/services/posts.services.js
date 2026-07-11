@@ -6,7 +6,8 @@ const { getCategories } = require('./categories.services.js')
 const { getCategoryById } = require('../db/category.js')
 const { addPostToSaved, removePostFromSaved } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
-const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentByPostId } = require('../db/postComments')
+const { commentPost, getComments, deleteComment, flattenComments } = require('./comments.services.js')
+const { deleteCommentsByIds } = require('../db/comments.js')
 
 const { uploadImage } = require('./aws.services')
 
@@ -88,7 +89,22 @@ async function createPost({
     if(!profile || !title || !content_text || !category) {
         throw new AppError({ message: "Missing required fields!" })
     }
-    
+
+    const category_data = await getCategoryById(category)
+
+    if(!category_data.status) {
+        throw new BadRequestError({
+            errors: {
+                body: {
+                    category: {
+                        message: 'Category not found!',
+                        data: category
+                    }
+                }
+            }
+        })
+    }
+
     var img_url = null
 
     if(featured_image) {
@@ -133,6 +149,24 @@ async function editPost(id, data, profile) {
     if(!post.status) {
         throw new NotFoundError({ message: "Post not found!" })
     }
+
+    if(data.category) {
+        const category_data = await getCategoryById(data.category)
+    
+        if(!category_data.status) {
+            throw new BadRequestError({
+                errors: {
+                    body: {
+                        category: {
+                            message: 'Category not found!',
+                            data: invalidIds
+                        }
+                    }
+                }
+            })
+        }
+    }
+    
 
     if(Object.keys(data).includes("featured_image")) {
         if(post.data.featured_image) {
@@ -200,7 +234,6 @@ async function getPosts(params, expand) {
         throw new NotFoundError({ message: "Posts not found!" });
     }
 
-    // Загружаем комментарии параллельно
     await Promise.all(
         posts.data.map(async (post) => {
             const comments = await getComments(post._id);
@@ -212,14 +245,12 @@ async function getPosts(params, expand) {
         ? expand.split(",").map((e) => e.trim())
         : [];
 
-    // Загружаем авторов параллельно
     if (expand_options.includes("author")) {
         posts.data = await Promise.all(
             posts.data.map(insertAuthorToPost)
         );
     }
 
-    // Категории
     if (expand_options.includes("category")) {
         const categories = await getCategories();
 
@@ -277,13 +308,6 @@ async function deletePost(id, profile) {
         throw new AppError({ message: "Missing required fields!" })
     }
 
-    const result = await deletePostById(id)
-
-
-    if(!result.status) {
-        throw new NotFoundError({ message: "Post not found!" })
-    }
-
     let users_with_saved_post = await getUsersByQuery({ saved_posts: new ObjectId(id) })
 
     if(users_with_saved_post.status) {
@@ -292,40 +316,13 @@ async function deletePost(id, profile) {
         }
     }
 
-    try {
-        const comments = await getComments(new ObjectId(id))
+    const comments = await getComments(new ObjectId(id))
 
-        function flattenComments(comments) {
-            const result = [];
+    const comments_to_delete = flattenComments(comments.data)
+
+    const comments_delete_result = await deleteCommentsByIds(comments_to_delete)
     
-            function walk(items) {
-                for (const comment of items) {
-                    result.push(comment);
-    
-                    if (comment.replies?.length) {
-                        walk(comment.replies);
-                    }
-                }
-            }
-    
-            walk(comments);
-    
-            return result;
-        }
-    
-        const comments_to_delete = flattenComments(comments.data)
-    
-        for(const comment of comments_to_delete) {
-            const result = await deleteCommentByPostId(comment._id)
-            if(!result.status) {
-                throw new AppError({ message: `Error to delete comment with id ${comment._id} of post ${id}!` })
-            }
-        }
-    }
-    catch(e) {
-        if(e instanceof NotFoundError) {
-        }
-    }
+    const result = await deletePostById(id)
 
     await deleteFile(result.data.featured_image ?? "")
 
@@ -395,119 +392,6 @@ async function unsavePost(profile, id) {
     }
 }
 
-async function commentPost(post_id, comment_text, parent_comment_id, profile) {
-    if(!post_id || !comment_text || !profile) {
-        throw new AppError({ message: "Missing required fields!" })
-    }
-    
-    let result
-
-    
-    if(parent_comment_id) {
-        result = await addReplyToComment(parent_comment_id, comment_text, profile._id)
-        
-        if(result.status !== true) { 
-            throw new NotFoundError({ message: result.message })
-        }
-
-        const comment_author = (await getCommentsByQuery({ _id: parent_comment_id })).data[0].author
-        
-        if(comment_author.toString() !== profile._id.toString()) {
-            const res = await addNotificationToUserById(comment_author, { type: "reply_comment", user: profile._id, comment: result.data._id, post: post_id })
-        }
-    }
-
-    else {
-        result = await addCommentToPost(post_id, comment_text, profile._id)
-        
-        const post_author = (await getPostById(post_id)).data.author
-        
-        if(post_author.toString() !== profile._id.toString()) {
-            await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id })
-        }
-    }
-
-    if(!result.status) {
-        throw new NotFoundError({ message: result.message })
-    }
-
-
-    return {
-        status: true,
-        message: "Success commented post",
-        data: result.data
-    }
-}
-
-async function getComments(post_id, expand) {
-    const post = await getPostByQuery({ "_id": post_id })
-
-    if(!post.status) {
-        throw new NotFoundError({ message: "Post not found!" })
-    }
-
-    let post_comments = await getCommentsByPostId(post_id)
-
-    if(!post_comments.status) {
-        throw new NotFoundError({ message: post_comments.message })
-    }
-
-    let data = []
-
-    for (const comment of post_comments.data) {
-        data.push({
-            ...comment.toObject(),
-            replies: await get_replies(comment._id, expand)
-        });
-        if(expand === "author") {
-            const author = await getUserByQuery({ '_id': comment.author })
-            if(author.status) {
-                data[data.length - 1].author = {
-                    _id: author.data._id,
-                    nick_name: author.data.nick_name,
-                    avatar: author.data.avatar,
-                    is_verified: author.data.is_verified
-                }
-            }
-        }
-    }
-
-    return {
-        status: true,
-        message: "Success fetched comments",
-        data: data
-    }
-}
-
-async function get_replies(comment_id, expand) {
-    const comment_replies = await getCommentsByQuery({
-        parent_comment_id: comment_id
-    });
-    
-    if(!comment_replies.status) {
-        return [];
-    }
-
-    const replies = comment_replies.data;
-
-    for (const comment of replies) {
-        if(expand === "author") {
-            const author = await getUserByQuery({ '_id': comment.author })
-            if(author.status) {
-                comment.author = {
-                    _id: author.data._id,
-                    nick_name: author.data.nick_name,
-                    avatar: author.data.avatar,
-                    is_verified: author.data.is_verified
-                }
-            }
-        }
-        comment.replies = await get_replies(comment._id, expand);
-    }
-
-    return replies;
-}
-
 async function likePost(profile, post_id) {
     if(!profile || !post_id) {
         throw new AppError({ message: "Missing required fields!" })
@@ -570,8 +454,6 @@ module.exports = {
     deletePost,
     savePost,
     unsavePost,
-    commentPost,
-    getComments,
     likePost,
     unlikePost,
 }
