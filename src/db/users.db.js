@@ -7,7 +7,7 @@ async function getUsersByQuery(query = {}, options = { }) {
         with_notifications: false,
         ...options,
     };
-    
+
     let users = await User.find(query)
 
     if(users.length === 0) {

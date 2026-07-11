@@ -178,54 +178,65 @@ async function insertAuthorToPost(post) {
 }
 
 async function getPosts(params, expand) {
-    if(!params) {
-        throw new AppError({ message: "Missing required fields!" })
+    if (!params) {
+        throw new AppError({ message: "Missing required fields!" });
     }
 
-    params = normalizePostIdsFilter(params)
+    params = normalizePostIdsFilter(params);
 
     if (params.__emptyPostsResult) {
-        delete params.__emptyPostsResult
+        delete params.__emptyPostsResult;
 
         return {
             status: true,
             message: "Success fetched posts",
             data: []
-        }
+        };
     }
 
-    let posts = await getPostsByQuery(params)
-    
-    if(!posts.status) {
-        throw new NotFoundError({ message: "Posts not found!" })
+    const posts = await getPostsByQuery(params);
+
+    if (!posts.status) {
+        throw new NotFoundError({ message: "Posts not found!" });
     }
 
-    for(const post of posts.data) {
-        const comment = await getComments(post._id)
-        post.comments = comment.data
+    // Загружаем комментарии параллельно
+    await Promise.all(
+        posts.data.map(async (post) => {
+            const comments = await getComments(post._id);
+            post.comments = comments.data;
+        })
+    );
+
+    const expand_options = expand
+        ? expand.split(",").map((e) => e.trim())
+        : [];
+
+    // Загружаем авторов параллельно
+    if (expand_options.includes("author")) {
+        posts.data = await Promise.all(
+            posts.data.map(insertAuthorToPost)
+        );
     }
 
-    const expand_options = expand ? expand.split(',').map((e) => e.trim()) : []
-    
-    if(expand_options.includes("author")) {
-        for (let i = 0; i < posts.data.length; i++) {
-            posts.data[i] = await insertAuthorToPost(posts.data[i])
-        }
-    }
-    
-    if(expand_options.includes("category")) {
-        const categories = await getCategories()
-        
-        for(const post of posts.data) {
-            post.category = categories.data.find(cat => cat._id.toString() === post.category.toString())
-        }
+    // Категории
+    if (expand_options.includes("category")) {
+        const categories = await getCategories();
+
+        await Promise.all(
+            posts.data.map(async (post) => {
+                post.category = categories.data.find(
+                    (cat) => cat._id.toString() === post.category.toString()
+                );
+            })
+        );
     }
 
     return {
         status: true,
         message: "Success fetched posts",
         data: posts.data
-    }
+    };
 }
 
 async function getPostById(id, expand) {
