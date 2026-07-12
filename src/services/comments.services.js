@@ -3,6 +3,7 @@ const NotFoundError = require('../errors/NotFoundError');
 const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentById, getCommentById, deleteCommentsByIds } = require('../db/comments')
 const { getPostByQuery } = require('../db/posts')
 const { getUserByQuery } = require('../db/users.db')
+const { addNotificationToUserById } = require('../db/profile')
 
 async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     if(!post_id || !comment_text || !profile) {
@@ -29,7 +30,7 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     else {
         result = await addCommentToPost(post_id, comment_text, profile._id)
         
-        const post_author = (await getPostById(post_id)).data.author
+        const post_author = (await getPostByQuery({ _id: post_id })).data.author
         
         if(post_author.toString() !== profile._id.toString()) {
             await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id })

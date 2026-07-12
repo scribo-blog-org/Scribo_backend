@@ -11,7 +11,7 @@ const canDelete = async (req, res, next) => {
         
         if(!comment.status) { throw new NotFoundError(comment.message) }
 
-        if(comment.data.author.toString() === req.profile._id) { return next() }
+        if(comment.data.author.toString() === req.profile._id.toString()) { return next() }
 
         if(hasPermissions(req.profile, PERMISSIONS.DELETE_ANY_COMMENT)) { return next() }
 

@@ -1,4 +1,4 @@
-const { commentPost } = require('../../services/posts.services')
+const { commentPost } = require('../../services/comments.services')
 
 const doCommentController = async (req, res, next) => {
     try {
