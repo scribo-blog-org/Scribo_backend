@@ -4,7 +4,7 @@ const { getUserByQuery, getUsersByQuery } = require('../db/users.db')
 const { getPostByQuery, getPostsByQuery, createNewPost, updatePostById, deletePostById, doLikeToPost, doUnlikePost } = require('../db/posts')
 const { getCategories } = require('./categories.services.js')
 const { getCategoryById } = require('../db/category.js')
-const { addPostToSaved, removePostFromSaved } = require('../db/profile')
+const { addPostToSaved, removePostFromSaved, removeNotification } = require('../db/profile')
 const { addNotificationToUserById } = require('../db/profile.js')
 const { commentPost, getComments, deleteComment, flattenComments } = require('./comments.services.js')
 const { deleteCommentsByIds } = require('../db/comments.js')
@@ -321,10 +321,34 @@ async function deletePost(id, profile) {
     const comments_to_delete = flattenComments(comments.data)
 
     const comments_delete_result = await deleteCommentsByIds(comments_to_delete)
-    
+
     const result = await deletePostById(id)
+    
+    if(!result.status) {
+        throw new NotFoundError({ message: "Failed to delete post!" })
+    }
 
     await deleteFile(result.data.featured_image ?? "")
+
+    const commentIds = comments_to_delete.map(comment => comment._id);
+
+    await removeNotification({
+        type: {
+            $in: ["reply_comment", "like_comment"]
+        },
+        comment: {
+            $in: commentIds
+        }
+    });
+
+    await removeNotification({
+        type: {
+            $in: ["like_post", "comment_post"]
+        },
+        post: id
+    });
+
+
 
     global.Logger.log({
         type: "delete_post",
