@@ -134,6 +134,81 @@ async function deleteCommentsByIds(comment_ids) {
     }
 }
 
+async function updateCommentById(comment_id, comment_text) {
+    const result = await postComment.findByIdAndUpdate(
+        comment_id,
+        { comment_text },
+        {
+            new: true,
+            runValidators: true
+        }
+    ).lean();
+
+    if(!result) {
+        return {
+            status: false,
+            message: "Comment not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success updated comment",
+        data: result
+    }
+}
+
+async function addLikeToComment(comment_id, profile_id) {
+    const result = await postComment.findByIdAndUpdate(
+        comment_id,
+        { $addToSet: { likes: profile_id } },
+        {
+            new: true,
+            runValidators: true
+        }
+    ).lean();
+
+    if(!result) {
+        return {
+            status: false,
+            message: "Comment not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success liked comment",
+        data: result
+    }
+}
+
+async function removeLikeFromComment(comment_id, profile_id) {
+    const result = await postComment.findByIdAndUpdate(
+        comment_id,
+        { $pull: { likes: profile_id } },
+        {
+            new: true,
+            runValidators: true
+        }
+    ).lean();
+
+    if(!result) {
+        return {
+            status: false,
+            message: "Comment not found!",
+            data: null
+        }
+    }
+
+    return {
+        status: true,
+        message: "Success unliked comment",
+        data: result
+    }
+}
+
 module.exports = {
     addCommentToPost,
     addReplyToComment,
@@ -141,5 +216,8 @@ module.exports = {
     getCommentsByQuery,
     deleteCommentById,
     getCommentById,
-    deleteCommentsByIds
+    deleteCommentsByIds,
+    updateCommentById,
+    addLikeToComment,
+    removeLikeFromComment
 }

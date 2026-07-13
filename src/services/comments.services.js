@@ -1,6 +1,17 @@
 const NotFoundError = require('../errors/NotFoundError');
+const ConflictError = require('../errors/ConflictError');
 
-const { addCommentToPost, addReplyToComment, getCommentsByPostId, getCommentsByQuery, deleteCommentById, getCommentById, deleteCommentsByIds } = require('../db/comments')
+const { addCommentToPost,
+    addReplyToComment,
+    getCommentsByPostId,
+    getCommentsByQuery,
+    deleteCommentById,
+    getCommentById,
+    deleteCommentsByIds,
+    updateCommentById,
+    addLikeToComment,
+    removeLikeFromComment
+    } = require('../db/comments')
 const { getPostByQuery } = require('../db/posts')
 const { getUserByQuery } = require('../db/users.db')
 const { addNotificationToUserById } = require('../db/profile')
@@ -156,9 +167,80 @@ function flattenComments(comments) {
     return result;
 }
 
+async function editComment(comment_id, comment_text) {
+    const comment = await getCommentById(comment_id)
+
+    if(!comment.status) {
+        throw new NotFoundError({ message: comment.message })
+    }
+
+    const result = await updateCommentById(comment_id, comment_text)
+
+    if(!result.status) {
+        throw new NotFoundError({ message: result.message })
+    }
+
+    return {
+        status: true,
+        message: "Success updated comment",
+        data: result.data
+    }
+}
+
+async function likeComment(comment_id, profile) {
+    const comment = await getCommentById(comment_id)
+
+    if(!comment.status) {
+        throw new NotFoundError({ message: comment.message })
+    }
+
+    if(comment.data.likes.some(id => id.equals(profile._id))) {
+        throw new ConflictError({ message: "You have already liked this comment!" })
+    }
+
+    const result = await addLikeToComment(comment_id, profile._id)
+
+    if(!result.status) {
+        throw new NotFoundError({ message: result.message })
+    }
+
+    return {
+        status: true,
+        message: "Success liked comment",
+        data: result.data
+    }
+}
+
+async function unlikeComment(comment_id, profile) {
+    const comment = await getCommentById(comment_id)
+
+    if(!comment.status) {
+        throw new NotFoundError({ message: comment.message })
+    }
+
+    if(!comment.data.likes.some(id => id.equals(profile._id))) {
+        throw new ConflictError({ message: "You have not liked this comment!" })
+    }
+
+    const result = await removeLikeFromComment(comment_id, profile._id)
+
+    if(!result.status) {
+        throw new NotFoundError({ message: result.message })
+    }
+
+    return {
+        status: true,
+        message: "Success unliked comment",
+        data: result.data
+    }
+}
+
 module.exports = {
     commentPost,
     getComments,
     deleteComment,
-    flattenComments
+    flattenComments,
+    editComment,
+    likeComment,
+    unlikeComment
 }
