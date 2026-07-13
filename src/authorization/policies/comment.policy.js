@@ -11,7 +11,7 @@ const canDelete = async (req, res, next) => {
         
         if(!comment.status) { throw new NotFoundError(comment.message) }
 
-        if(comment.data.author.toString() === req.profile._id) { return next() }
+        if(comment.data.author.toString() === req.profile._id.toString()) { return next() }
 
         if(hasPermissions(req.profile, PERMISSIONS.DELETE_ANY_COMMENT)) { return next() }
 
@@ -21,6 +21,21 @@ const canDelete = async (req, res, next) => {
     }
 };
 
+const canEdit = async (req, res, next) => {
+    try {
+        const comment = await getCommentById(req.params.id);
+        
+        if(!comment.status) { throw new NotFoundError(comment.message) }
+
+        if(comment.data.author.toString() === req.profile._id.toString()) { return next() }
+
+        throw new ForbiddenError("You don't have permission to edit this comment");
+    } catch (error) {
+        next(error);
+    }
+}
+
 exports = module.exports = {
-    canDelete
+    canDelete,
+    canEdit
 }
