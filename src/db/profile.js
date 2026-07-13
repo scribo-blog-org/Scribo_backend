@@ -151,10 +151,28 @@ async function updateProfileById(user_id, update_fields) {
     }
 }
 
+async function removeNotification(filter) {
+    const result = await User.updateMany(
+        {},
+        {
+            $pull: {
+                notifications: filter
+            }
+        }
+    );
+
+    return {
+        status: true,
+        message: "Success removed notification",
+        data: result
+    }
+}
+
 module.exports = {
     addPostToSaved,
     removePostFromSaved,
     readNotificationsByUserId,
     addNotificationToUserById,
-    updateProfileById
+    updateProfileById,
+    removeNotification
 }

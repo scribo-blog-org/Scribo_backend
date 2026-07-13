@@ -14,7 +14,7 @@ const { addCommentToPost,
     } = require('../db/comments')
 const { getPostByQuery } = require('../db/posts')
 const { getUserByQuery } = require('../db/users.db')
-const { addNotificationToUserById } = require('../db/profile')
+const { addNotificationToUserById, removeNotification } = require('../db/profile')
 
 async function commentPost(post_id, comment_text, parent_comment_id, profile) {
     if(!post_id || !comment_text || !profile) {
@@ -44,7 +44,7 @@ async function commentPost(post_id, comment_text, parent_comment_id, profile) {
         const post_author = (await getPostByQuery({ _id: post_id })).data.author
         
         if(post_author.toString() !== profile._id.toString()) {
-            await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id })
+            await addNotificationToUserById(post_author, { type: "comment_post", user: profile._id, post: post_id, comment: result.data._id })
         }
     }
 
@@ -141,6 +141,13 @@ async function deleteComment(comment_id) {
     comments_to_delete.push(root_comment.data)
 
     const result = await deleteCommentsByIds(comments_to_delete)
+    const post_id = root_comment.data.post_id
+
+    await removeNotification({
+        comment: {
+            $in: comments_to_delete.map(comment => comment._id)
+        }
+    });
 
     return {
         status: true,

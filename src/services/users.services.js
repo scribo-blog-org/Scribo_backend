@@ -1,4 +1,6 @@
 const { getUserByQuery, followToUserById, unfollowToUserById , getUsersByQuery } = require('../db/users.db')
+const { getPostByQuery } = require('../db/posts')
+const { getCommentsByQuery } = require('../db/comments')
 const { addNotificationToUserById } = require('../db/profile')
 const AppError = require('../errors/AppError')
 const NotFoundError = require('../errors/NotFoundError')
