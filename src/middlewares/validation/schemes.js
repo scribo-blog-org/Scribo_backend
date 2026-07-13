@@ -87,6 +87,15 @@ const deleteCommentSchema = new Schema()
     .required('id', { source: 'params' })
     .build();
 
+const likeCommentSchema = new Schema()
+    .required('id', { source: 'params' })
+    .build();
+
+const editCommentSchema = new Schema()
+    .required('id', { source: 'params' })
+    .optional('comment_text', { source: 'body' })
+    .build();
+
 const createPostSchema = new Schema()
     .required('title')
     .required('content_text')
@@ -183,5 +192,7 @@ module.exports = {
     editCategorySchema,
     createCategorySchema,
     deleteCategorySchema,
-    deleteCommentSchema
+    deleteCommentSchema,
+    editCommentSchema,
+    likeCommentSchema
 }
