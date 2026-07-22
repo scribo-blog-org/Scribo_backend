@@ -10,6 +10,7 @@ const { confirmEmailCode } = require("./verification.service")
 
 const { deleteVerificationCode } = require("../../db/email")
 const { getUserByQuery, createNewUser } = require('../../db/users.db')
+const { updateProfileById } = require("../../db/profile")
 
 async function register({
     nickName,
@@ -42,8 +43,15 @@ async function register({
 
     let upload_image_result
 
+    let newUser = await createNewUser({
+        nick_name: nickName,
+        password: setPasswordHash(password),
+        description: description,
+        email: email
+    })
+
     if(avatar) {
-        upload_image_result = await uploadImage(avatar, "avatar", nickName)
+        upload_image_result = await uploadImage(avatar, "avatar", newUser.data._id.toString())
 
         if(!upload_image_result.status) {
             throw new AppError({ message: "Error to upload avatar image" })
@@ -52,15 +60,17 @@ async function register({
     
     const img = upload_image_result ? upload_image_result.data.url : null
 
-    let newUser = await createNewUser({
-        nick_name: nickName,
-        password: setPasswordHash(password),
-        description: description,
-        avatar: img,
-        email: email
-    })
 
     delete newUser.data.password
+
+    await updateProfileById(
+        newUser.data._id,
+        {
+            avatar: img
+        }
+    );
+
+    newUser.data.avatar = img;
 
     global.Logger.log({
         type: "register",
