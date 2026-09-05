@@ -1,0 +1,17 @@
+# compiled
+dist
+node_modules
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs / os
+*.log
+.DS_Store
+
+# tests
+coverage
+
+graphify-out/

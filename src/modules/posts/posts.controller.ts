@@ -1,0 +1,139 @@
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+    UploadedFile,
+    UseInterceptors,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../authz/decorators/current-user.decorator';
+import { Public } from '../../authz/decorators/public.decorator';
+import { RequirePermissions } from '../../authz/decorators/require-permissions.decorator';
+import { PERMISSIONS } from '../../authz/permissions';
+import type { Actor } from '../../authz/policy';
+import { ListPostsQueryDto } from '../../common/query.dto';
+import { imageFileInterceptor } from '../../common/upload';
+import { CommentsService } from './comments.service';
+import { CreateCommentDto, CreatePostDto, EditPostDto } from './dto/posts.dto';
+import { PostsService } from './posts.service';
+
+@ApiTags('posts')
+@Controller('posts')
+export class PostsController {
+    constructor(
+        private readonly posts: PostsService,
+        private readonly comments: CommentsService,
+    ) {}
+
+    @Public()
+    @Get()
+    async list(@Query() query: ListPostsQueryDto) {
+        const data = await this.posts.list(query);
+        return { status: true, message: 'Posts fetched successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @RequirePermissions(PERMISSIONS.CREATE_POST)
+    @Post()
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(imageFileInterceptor('featuredImage'))
+    async create(
+        @Body() dto: CreatePostDto,
+        @UploadedFile() featuredImage: Express.Multer.File | undefined,
+        @CurrentUser() actor: Actor,
+    ) {
+        const data = await this.posts.create(dto, featuredImage, actor);
+        return { status: true, message: 'Post created successfully!', data };
+    }
+
+    @Public()
+    @Get(':id/comments')
+    async listComments(
+        @Param('id') id: string,
+        @Query('expand') expand?: string,
+    ) {
+        const data = await this.comments.listForPost(id, expand);
+        return {
+            status: true,
+            message: 'Comments fetched successfully!',
+            data,
+        };
+    }
+
+    @ApiBearerAuth()
+    @Post(':id/comments')
+    async createComment(
+        @Param('id') id: string,
+        @Body() dto: CreateCommentDto,
+        @CurrentUser() actor: Actor,
+    ) {
+        const data = await this.comments.create(
+            id,
+            dto.commentText,
+            dto.parentCommentId,
+            actor,
+        );
+        return { status: true, message: 'Comment added successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @Post(':id/save')
+    async save(@Param('id') id: string, @CurrentUser() actor: Actor) {
+        const data = await this.posts.save(id, actor);
+        return { status: true, message: 'Post saved successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @Delete(':id/save')
+    async unsave(@Param('id') id: string, @CurrentUser() actor: Actor) {
+        const data = await this.posts.unsave(id, actor);
+        return { status: true, message: 'Post unsaved successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @Post(':id/like')
+    async like(@Param('id') id: string, @CurrentUser() actor: Actor) {
+        const data = await this.posts.like(id, actor);
+        return { status: true, message: 'Post liked successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @Delete(':id/like')
+    async unlike(@Param('id') id: string, @CurrentUser() actor: Actor) {
+        const data = await this.posts.unlike(id, actor);
+        return { status: true, message: 'Post unliked successfully!', data };
+    }
+
+    @Public()
+    @Get(':id')
+    async get(@Param('id') id: string, @Query('expand') expand?: string) {
+        const data = await this.posts.getById(id, expand);
+        return { status: true, message: 'Post fetched successfully!', data };
+    }
+
+    @ApiBearerAuth()
+    @Patch(':id')
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(imageFileInterceptor('featuredImage'))
+    async edit(
+        @Param('id') id: string,
+        @Body() dto: EditPostDto,
+        @UploadedFile() featuredImage: Express.Multer.File | undefined,
+        @CurrentUser() actor: Actor,
+    ) {
+        const data = await this.posts.edit(id, dto, featuredImage, actor);
+        return { status: true, message: 'Post updated successfully', data };
+    }
+
+    @ApiBearerAuth()
+    @Delete(':id')
+    async remove(@Param('id') id: string, @CurrentUser() actor: Actor) {
+        const data = await this.posts.remove(id, actor);
+        return { status: true, message: 'Post deleted successfully!', data };
+    }
+}
