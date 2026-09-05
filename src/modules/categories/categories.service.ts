@@ -111,7 +111,7 @@ export class CategoriesService {
         if (data.categoryIcon !== undefined) update.icon = data.categoryIcon;
         if (data.categoryColor !== undefined) update.color = data.categoryColor;
         const result = await this.categories
-            .findByIdAndUpdate(id, update, { new: true })
+            .findByIdAndUpdate(id, update, { returnDocument: 'after' })
             .lean();
         if (!result) {
             throw new NotFoundException('Category not found!');

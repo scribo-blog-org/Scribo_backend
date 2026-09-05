@@ -34,10 +34,10 @@ export class PostsService {
         private readonly logger: LoggerService,
     ) {}
 
-    private objectId(value?: string) {
-        if (!value) return undefined;
-        const ids = String(value)
-            .split(',')
+    private objectId(value?: string | string[]) {
+        if (value == null || value === '') return undefined;
+        const ids = (Array.isArray(value) ? value : [value])
+            .flatMap((item) => String(item).split(','))
             .map((item) => item.trim())
             .filter(Boolean);
         if (!ids.length) return undefined;
@@ -281,7 +281,7 @@ export class PostsService {
         }
 
         const result = await this.posts
-            .findByIdAndUpdate(id, update, { new: true })
+            .findByIdAndUpdate(id, update, { returnDocument: 'after' })
             .lean();
         if (!result) {
             throw new NotFoundException('Post not found!');
@@ -385,7 +385,7 @@ export class PostsService {
             .findByIdAndUpdate(
                 id,
                 { $addToSet: { likes: actor.id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean();
         if (String(post.author) !== actor.id) {
@@ -410,7 +410,7 @@ export class PostsService {
             .findByIdAndUpdate(
                 id,
                 { $pull: { likes: actor.id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean();
         return { likes: result?.likes };

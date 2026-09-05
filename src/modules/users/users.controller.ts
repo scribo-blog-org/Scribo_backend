@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../authz/decorators/current-user.decorator';
 import { Public } from '../../authz/decorators/public.decorator';
@@ -22,9 +31,8 @@ export class UsersController {
     async list(@Query() query: ListUsersQueryDto) {
         const data = await this.users.getUsers({
             nick_name: query.nick_name,
-            _id: query.id,
+            _id: query._id,
             is_verified: query.is_verified,
-            is_admin: query.is_admin,
         });
         return { status: true, message: 'Users fetched', data };
     }
@@ -61,7 +69,11 @@ export class UsersController {
         if (!ROLE_VALUES.includes(dto.userRole as Role)) {
             throw fieldError('userRole', 'Invalid role', dto.userRole);
         }
-        const data = await this.users.updateRole(id, dto.userRole as Role, actor);
+        const data = await this.users.updateRole(
+            id,
+            dto.userRole as Role,
+            actor,
+        );
         return { status: true, message: 'Role updated', data };
     }
 }

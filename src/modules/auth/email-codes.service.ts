@@ -51,7 +51,7 @@ export class EmailCodesService {
                         createdAt: new Date(),
                     },
                 },
-                { upsert: true, new: true },
+                { upsert: true, returnDocument: 'after' },
             )
             .lean();
     }
@@ -61,7 +61,7 @@ export class EmailCodesService {
             .findOneAndUpdate(
                 emailFilter(email, purpose),
                 { $inc: { attempts: 1 } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean();
     }

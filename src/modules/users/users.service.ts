@@ -85,13 +85,34 @@ export class UsersService {
         return user;
     }
 
-    async getUsers(params: Record<string, string | undefined>) {
-        const allowed = ['nick_name', 'email', 'role', 'is_verified', '_id'];
-        const query = Object.fromEntries(
-            Object.entries(params).filter(
-                ([key, value]) => allowed.includes(key) && value !== undefined,
-            ),
-        );
+    async getUsers(params: {
+        nick_name?: string;
+        email?: string;
+        role?: string;
+        is_verified?: string;
+        _id?: string | string[];
+    }) {
+        const query: Record<string, unknown> = {};
+
+        if (params.nick_name) {
+            query.nick_name = params.nick_name;
+        }
+        if (params.email) {
+            query.email = params.email;
+        }
+        if (params.role) {
+            query.role = params.role;
+        }
+        if (params.is_verified) {
+            query.is_verified = params.is_verified;
+        }
+        if (params._id !== undefined) {
+            const ids = (Array.isArray(params._id) ? params._id : [params._id])
+                .map(String)
+                .filter(Boolean);
+            query._id = { $in: ids };
+        }
+
         const users = await this.users.find(query).lean<UserLean[]>();
         return users.map((user) => this.sanitize(user)!);
     }
@@ -128,14 +149,14 @@ export class UsersService {
             .findByIdAndUpdate(
                 followed._id,
                 { $addToSet: { followers: follower._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
         const followerDoc = await this.users
             .findByIdAndUpdate(
                 follower._id,
                 { $addToSet: { follows: followed._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
 
@@ -177,14 +198,14 @@ export class UsersService {
             .findByIdAndUpdate(
                 followed._id,
                 { $pull: { followers: follower._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
         const followerDoc = await this.users
             .findByIdAndUpdate(
                 follower._id,
                 { $pull: { follows: followed._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
 
@@ -209,7 +230,7 @@ export class UsersService {
         }
 
         const result = await this.users
-            .findByIdAndUpdate(user._id, { role: newRole }, { new: true })
+            .findByIdAndUpdate(user._id, { role: newRole }, { returnDocument: 'after' })
             .lean<UserLean>();
         await this.sessions.deleteMany({
             $or: [
@@ -241,7 +262,7 @@ export class UsersService {
 
     async updateById(id: string, fields: Record<string, unknown>) {
         const result = await this.users
-            .findByIdAndUpdate(id, { $set: fields }, { new: true })
+            .findByIdAndUpdate(id, { $set: fields }, { returnDocument: 'after' })
             .lean<UserLean>();
         return this.sanitize(result, {
             withNotifications: true,
@@ -273,7 +294,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 id,
                 { $set: { 'notifications.$[].is_read': true } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean();
     }
@@ -335,7 +356,7 @@ export class UsersService {
         return this.users.findByIdAndUpdate(
             userId,
             { $push: { notifications: payload } },
-            { new: true },
+            { returnDocument: 'after' },
         );
     }
 
@@ -348,7 +369,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 userId,
                 { $addToSet: { saved_posts: postId } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
     }
@@ -358,7 +379,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 userId,
                 { $pull: { saved_posts: postId } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
     }
