@@ -34,10 +34,10 @@ export class PostsService {
         private readonly logger: LoggerService,
     ) {}
 
-    private objectId(value?: string) {
-        if (!value) return undefined;
-        const ids = String(value)
-            .split(',')
+    private objectId(value?: string | string[]) {
+        if (value == null || value === '') return undefined;
+        const ids = (Array.isArray(value) ? value : [value])
+            .flatMap((item) => String(item).split(','))
             .map((item) => item.trim())
             .filter(Boolean);
         if (!ids.length) return undefined;

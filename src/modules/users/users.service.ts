@@ -85,13 +85,34 @@ export class UsersService {
         return user;
     }
 
-    async getUsers(params: Record<string, string | undefined>) {
-        const allowed = ['nick_name', 'email', 'role', 'is_verified', '_id'];
-        const query = Object.fromEntries(
-            Object.entries(params).filter(
-                ([key, value]) => allowed.includes(key) && value !== undefined,
-            ),
-        );
+    async getUsers(params: {
+        nick_name?: string;
+        email?: string;
+        role?: string;
+        is_verified?: string;
+        _id?: string | string[];
+    }) {
+        const query: Record<string, unknown> = {};
+
+        if (params.nick_name) {
+            query.nick_name = params.nick_name;
+        }
+        if (params.email) {
+            query.email = params.email;
+        }
+        if (params.role) {
+            query.role = params.role;
+        }
+        if (params.is_verified) {
+            query.is_verified = params.is_verified;
+        }
+        if (params._id !== undefined) {
+            const ids = (Array.isArray(params._id) ? params._id : [params._id])
+                .map(String)
+                .filter(Boolean);
+            query._id = { $in: ids };
+        }
+
         const users = await this.users.find(query).lean<UserLean[]>();
         return users.map((user) => this.sanitize(user)!);
     }

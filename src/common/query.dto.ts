@@ -1,6 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+
+function joinRepeatableQuery({ value }: { value: unknown }): string | undefined {
+    if (value == null || value === '') {
+        return undefined;
+    }
+    const parts = (Array.isArray(value) ? value : [value])
+        .flatMap((item) => String(item).split(','))
+        .map((item) => item.trim())
+        .filter(Boolean);
+    return parts.length ? parts.join(',') : undefined;
+}
 
 export class PaginationQueryDto {
     @ApiPropertyOptional()
@@ -20,13 +31,15 @@ export class PaginationQueryDto {
 }
 
 export class ListPostsQueryDto extends PaginationQueryDto {
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ isArray: true, type: String })
     @IsOptional()
+    @Transform(({ value }) => joinRepeatableQuery({ value }))
     @IsString()
     author?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ isArray: true, type: String })
     @IsOptional()
+    @Transform(({ value }) => joinRepeatableQuery({ value }))
     @IsString()
     category?: string;
 
@@ -40,18 +53,23 @@ export class ListPostsQueryDto extends PaginationQueryDto {
     @IsString()
     created_date?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ isArray: true, type: String })
     @IsOptional()
+    @Transform(({ value }) => joinRepeatableQuery({ value }))
     @IsString()
     ids?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ name: '_id', isArray: true, type: String })
     @IsOptional()
+    @Transform(({ value, obj }) =>
+        joinRepeatableQuery({ value: value ?? obj._id ?? obj.id }),
+    )
     @IsString()
     _id?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ isArray: true, type: String })
     @IsOptional()
+    @Transform(({ value }) => joinRepeatableQuery({ value }))
     @IsString()
     id?: string;
 }
@@ -62,10 +80,17 @@ export class ListUsersQueryDto {
     @IsString()
     nick_name?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ name: '_id', isArray: true, type: String })
     @IsOptional()
-    @IsString()
-    id?: string;
+    @Transform(({ obj }) => {
+        const raw = obj._id ?? obj.id;
+        if (raw == null || raw === '') {
+            return undefined;
+        }
+        return (Array.isArray(raw) ? raw : [raw]).map(String);
+    })
+    @IsString({ each: true })
+    _id?: string[];
 
     @ApiPropertyOptional()
     @IsOptional()
