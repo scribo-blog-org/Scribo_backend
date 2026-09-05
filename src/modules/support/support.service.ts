@@ -84,10 +84,7 @@ export class SupportService {
     }
 
     private requestPageUrl(accessKey?: string) {
-        const origin =
-            this.config.get<string>('FRONTEND_ORIGIN') ||
-            this.config.get<string>('FRONTEND_ORIGIN_DEV') ||
-            '';
+        const origin = this.config.get<string>('FRONTEND_ORIGIN') || '';
         if (!origin || !accessKey) return null;
         return `${origin.replace(/\/$/, '')}/support/${accessKey}`;
     }

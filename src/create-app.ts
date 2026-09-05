@@ -1,27 +1,21 @@
-import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RequestMethod, type INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 import { openApiDocument } from './common/openapi-document';
 import { ScriboValidationPipe } from './common/scribo-validation.pipe';
 
-export async function createScriboApp(): Promise<INestApplication> {
-    const app = await NestFactory.create(AppModule);
+export async function configureScriboApp(
+    app: INestApplication,
+): Promise<INestApplication> {
     const http = app.getHttpAdapter().getInstance() as {
         set: (key: string, value: unknown) => void;
     };
     http.set('trust proxy', 1);
 
-    const origin = [
-        process.env.FRONTEND_ORIGIN,
-        process.env.FRONTEND_ORIGIN_DEV,
-        'http://localhost:3002',
-        'http://127.0.0.1:3002',
-    ].filter(Boolean) as string[];
+    const origin = [process.env.FRONTEND_ORIGIN].filter(Boolean) as string[];
 
     app.setGlobalPrefix('api', {
         exclude: [{ path: 'health', method: RequestMethod.GET }],
