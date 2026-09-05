@@ -232,7 +232,7 @@ export class CommentsService {
             .findByIdAndUpdate(
                 commentId,
                 { comment_text: commentText },
-                { new: true, runValidators: true },
+                { returnDocument: 'after', runValidators: true },
             )
             .lean();
     }
@@ -251,7 +251,7 @@ export class CommentsService {
             .findByIdAndUpdate(
                 commentId,
                 { $addToSet: { likes: actor.id } },
-                { new: true, runValidators: true },
+                { returnDocument: 'after', runValidators: true },
             )
             .lean();
     }
@@ -270,7 +270,7 @@ export class CommentsService {
             .findByIdAndUpdate(
                 commentId,
                 { $pull: { likes: actor.id } },
-                { new: true, runValidators: true },
+                { returnDocument: 'after', runValidators: true },
             )
             .lean();
     }

@@ -128,14 +128,14 @@ export class UsersService {
             .findByIdAndUpdate(
                 followed._id,
                 { $addToSet: { followers: follower._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
         const followerDoc = await this.users
             .findByIdAndUpdate(
                 follower._id,
                 { $addToSet: { follows: followed._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
 
@@ -177,14 +177,14 @@ export class UsersService {
             .findByIdAndUpdate(
                 followed._id,
                 { $pull: { followers: follower._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
         const followerDoc = await this.users
             .findByIdAndUpdate(
                 follower._id,
                 { $pull: { follows: followed._id } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
 
@@ -209,7 +209,7 @@ export class UsersService {
         }
 
         const result = await this.users
-            .findByIdAndUpdate(user._id, { role: newRole }, { new: true })
+            .findByIdAndUpdate(user._id, { role: newRole }, { returnDocument: 'after' })
             .lean<UserLean>();
         await this.sessions.deleteMany({
             $or: [
@@ -241,7 +241,7 @@ export class UsersService {
 
     async updateById(id: string, fields: Record<string, unknown>) {
         const result = await this.users
-            .findByIdAndUpdate(id, { $set: fields }, { new: true })
+            .findByIdAndUpdate(id, { $set: fields }, { returnDocument: 'after' })
             .lean<UserLean>();
         return this.sanitize(result, {
             withNotifications: true,
@@ -273,7 +273,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 id,
                 { $set: { 'notifications.$[].is_read': true } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean();
     }
@@ -335,7 +335,7 @@ export class UsersService {
         return this.users.findByIdAndUpdate(
             userId,
             { $push: { notifications: payload } },
-            { new: true },
+            { returnDocument: 'after' },
         );
     }
 
@@ -348,7 +348,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 userId,
                 { $addToSet: { saved_posts: postId } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
     }
@@ -358,7 +358,7 @@ export class UsersService {
             .findByIdAndUpdate(
                 userId,
                 { $pull: { saved_posts: postId } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<UserLean>();
     }

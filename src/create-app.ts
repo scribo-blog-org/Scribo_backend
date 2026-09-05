@@ -7,6 +7,18 @@ import { ApiExceptionFilter } from './common/api-exception.filter';
 import { openApiDocument } from './common/openapi-document';
 import { ScriboValidationPipe } from './common/scribo-validation.pipe';
 
+function isLocalBrowserOrigin(origin: string): boolean {
+    try {
+        const url = new URL(origin);
+        return (
+            url.protocol === 'http:' &&
+            (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+        );
+    } catch {
+        return false;
+    }
+}
+
 export async function configureScriboApp(
     app: INestApplication,
 ): Promise<INestApplication> {
@@ -15,7 +27,12 @@ export async function configureScriboApp(
     };
     http.set('trust proxy', 1);
 
-    const origin = [process.env.FRONTEND_ORIGIN].filter(Boolean) as string[];
+    const configuredOrigins = [process.env.FRONTEND_ORIGIN].filter(
+        Boolean,
+    ) as string[];
+    const allowLocalCors =
+        process.env.NODE_ENV !== 'production' &&
+        process.env.VERCEL_ENV !== 'production';
 
     app.setGlobalPrefix('api', {
         exclude: [{ path: 'health', method: RequestMethod.GET }],
@@ -30,15 +47,13 @@ export async function configureScriboApp(
         ) => {
             if (!requestOrigin) return callback(null, true);
             if (
-                origin.includes(requestOrigin) ||
-                requestOrigin.endsWith('.vercel.app')
+                configuredOrigins.includes(requestOrigin) ||
+                requestOrigin.endsWith('.vercel.app') ||
+                (allowLocalCors && isLocalBrowserOrigin(requestOrigin))
             ) {
                 return callback(null, true);
             }
-            return callback(
-                new Error(`CORS blocked for origin: ${requestOrigin}`),
-                false,
-            );
+            return callback(null, false);
         },
         credentials: true,
         methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],

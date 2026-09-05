@@ -408,7 +408,7 @@ export class SupportService {
                 .findByIdAndUpdate(
                     id,
                     { $set: { access_key: randomBytes(32).toString('hex') } },
-                    { new: true },
+                    { returnDocument: 'after' },
                 )
                 .lean<SupportLean>())!;
         }
@@ -447,7 +447,7 @@ export class SupportService {
                     },
                     $set: { updated_date: new Date() },
                 },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<SupportLean>();
         this.notifyAnonymousByEmail(existing, {
@@ -496,7 +496,7 @@ export class SupportService {
                     },
                     $set: { updated_date: new Date() },
                 },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<SupportLean>();
         if (asStaff) {
@@ -555,7 +555,7 @@ export class SupportService {
             .findByIdAndUpdate(
                 id,
                 { $set: { status: nextStatus, updated_date: new Date() } },
-                { new: true },
+                { returnDocument: 'after' },
             )
             .lean<SupportLean>();
         const statusLabel = STATUS_LABELS[nextStatus];
