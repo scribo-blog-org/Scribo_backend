@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../authz/decorators/current-user.decorator';
-import { Public } from '../../authz/decorators/public.decorator';
+import { OptionalAuth } from '../../authz/decorators/public.decorator';
 import { RequirePermissions } from '../../authz/decorators/require-permissions.decorator';
 import { PERMISSIONS } from '../../authz/permissions';
 import type { Actor } from '../../authz/policy';
@@ -25,22 +25,29 @@ import { UsersService } from './users.service';
 export class UsersController {
     constructor(private readonly users: UsersService) {}
 
-    @Public()
+    @OptionalAuth()
     @Get()
     @ApiOperation({ summary: 'List users' })
-    async list(@Query() query: ListUsersQueryDto) {
+    async list(
+        @Query() query: ListUsersQueryDto,
+        @CurrentUser() actor: Actor | undefined,
+    ) {
         const data = await this.users.getUsers({
             nick_name: query.nick_name,
             _id: query._id,
             is_verified: query.is_verified,
+            viewerId: actor?.id,
         });
         return { status: true, message: 'Users fetched', data };
     }
 
-    @Public()
+    @OptionalAuth()
     @Get(':nick_name')
-    async byNick(@Param('nick_name') nickName: string) {
-        const data = await this.users.getByNickName(nickName);
+    async byNick(
+        @Param('nick_name') nickName: string,
+        @CurrentUser() actor: Actor | undefined,
+    ) {
+        const data = await this.users.getByNickName(nickName, actor?.id);
         return { status: true, message: 'User fetched', data };
     }
 

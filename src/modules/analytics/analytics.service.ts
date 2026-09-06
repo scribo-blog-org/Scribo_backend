@@ -193,6 +193,7 @@ export class AnalyticsService {
             searchInsights,
             contentTags,
             topPosts,
+            recentUsers,
         ] = await Promise.all([
             this.pageViews.countDocuments(currentMatch),
             this.pageViews.countDocuments({ ...currentMatch, is_entry: true }),
@@ -325,6 +326,12 @@ export class AnalyticsService {
                 .sort({ views_count: -1 })
                 .limit(8)
                 .lean(),
+            this.users
+                .find()
+                .select('_id nick_name last_activity_at created_date')
+                .sort({ last_activity_at: -1 })
+                .limit(5)
+                .lean(),
         ]);
 
         return {
@@ -386,6 +393,18 @@ export class AnalyticsService {
                 _id: post._id,
                 title: post.title,
                 views_count: Number(post.views_count || 0),
+            })),
+            recent_users: (
+                recentUsers as Array<{
+                    _id: unknown;
+                    nick_name: string;
+                    last_activity_at?: Date;
+                    created_date?: Date;
+                }>
+            ).map((user) => ({
+                _id: user._id,
+                nick_name: user.nick_name,
+                last_activity_at: user.last_activity_at || user.created_date,
             })),
         };
     }
