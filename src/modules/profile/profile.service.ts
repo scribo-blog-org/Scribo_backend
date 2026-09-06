@@ -43,6 +43,7 @@ export class ProfileService {
         const user = await this.users.getById(actor.id, {
             withNotifications: true,
             withSavedPosts: true,
+            viewerId: actor.id,
         });
         if (!user) {
             throw new UnauthorizedException('Unauthorized');
@@ -83,6 +84,8 @@ export class ProfileService {
             mongoFields.is_email_public = fields.isEmailPublic;
         if (fields.isSavedPostsPublic !== undefined)
             mongoFields.is_saved_posts_public = fields.isSavedPostsPublic;
+        if (fields.isLastActivityPublic !== undefined)
+            mongoFields.is_last_activity_public = fields.isLastActivityPublic;
 
         if (avatar || fields.userAvatar === null || fields.userAvatar === '') {
             if (stored && 'avatar' in stored && stored.avatar) {

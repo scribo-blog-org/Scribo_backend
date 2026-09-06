@@ -3,6 +3,7 @@ import {
     ForbiddenException,
     Injectable,
     NotFoundException,
+    OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -10,6 +11,7 @@ import { canManageRole } from '../../authz/policy';
 import type { Actor } from '../../authz/policy';
 import type { Role } from '../../authz/roles';
 import { LoggerService } from '../../common/logger.service';
+import { tryConsume } from '../../common/rate-limit.guard';
 import { Session } from '../../database/schemas/session.schema';
 import { User } from '../../database/schemas/user.schema';
 
@@ -20,6 +22,8 @@ type UserLean = {
     password?: string;
     role: Role;
     is_saved_posts_public?: boolean;
+    is_last_activity_public?: boolean;
+    last_activity_at?: Date;
     saved_posts?: unknown[];
     follows: unknown[];
     followers: unknown[];
@@ -27,12 +31,46 @@ type UserLean = {
 };
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
     constructor(
         @InjectModel(User.name) private readonly users: Model<User>,
         @InjectModel(Session.name) private readonly sessions: Model<Session>,
         private readonly logger: LoggerService,
     ) {}
+
+    async onModuleInit() {
+        await this.users.collection.updateMany(
+            {
+                $or: [
+                    { last_activity_at: { $exists: false } },
+                    { last_activity_at: null },
+                ],
+            },
+            [{ $set: { last_activity_at: '$created_date' } }],
+        );
+        await this.users.updateMany(
+            { is_last_activity_public: { $exists: false } },
+            { $set: { is_last_activity_public: true } },
+        );
+    }
+
+    touchLastActivity(userId: string) {
+        if (!userId || !Types.ObjectId.isValid(userId)) {
+            return;
+        }
+        if (!tryConsume(`last-activity:${userId}`, 30_000, 1)) {
+            return;
+        }
+
+        setImmediate(() => {
+            void this.users.collection
+                .updateOne(
+                    { _id: new Types.ObjectId(userId) },
+                    { $set: { last_activity_at: new Date() } },
+                )
+                .catch(() => undefined);
+        });
+    }
 
     sanitize(
         user: UserLean | null,
@@ -40,6 +78,7 @@ export class UsersService {
             withPassword?: boolean;
             withSavedPosts?: boolean;
             withNotifications?: boolean;
+            viewerId?: string;
         } = {},
     ) {
         if (!user) return null;
@@ -54,6 +93,10 @@ export class UsersService {
             delete copy.saved_posts;
         }
         if (!options.withNotifications) delete copy.notifications;
+        const isOwner = options.viewerId && String(copy._id) === options.viewerId;
+        if (!isOwner && copy.is_last_activity_public === false) {
+            delete copy.last_activity_at;
+        }
         return copy;
     }
 
@@ -63,6 +106,7 @@ export class UsersService {
             withPassword?: boolean;
             withNotifications?: boolean;
             withSavedPosts?: boolean;
+            viewerId?: string;
         },
     ) {
         const user = await this.users.findById(id).lean<UserLean>();
@@ -71,14 +115,14 @@ export class UsersService {
 
     async getByQuery(
         query: Record<string, unknown>,
-        options?: { withPassword?: boolean },
+        options?: { withPassword?: boolean; viewerId?: string },
     ) {
         const user = await this.users.findOne(query).lean<UserLean>();
         return this.sanitize(user, options);
     }
 
-    async getByNickName(nickName: string) {
-        const user = await this.getByQuery({ nick_name: nickName });
+    async getByNickName(nickName: string, viewerId?: string) {
+        const user = await this.getByQuery({ nick_name: nickName }, { viewerId });
         if (!user) {
             throw new NotFoundException('User not found');
         }
@@ -91,6 +135,7 @@ export class UsersService {
         role?: string;
         is_verified?: string;
         _id?: string | string[];
+        viewerId?: string;
     }) {
         const query: Record<string, unknown> = {};
 
@@ -114,7 +159,9 @@ export class UsersService {
         }
 
         const users = await this.users.find(query).lean<UserLean[]>();
-        return users.map((user) => this.sanitize(user)!);
+        return users.map((user) =>
+            this.sanitize(user, { viewerId: params.viewerId })!,
+        );
     }
 
     async follow(userId: string, actor: Actor) {
@@ -256,7 +303,11 @@ export class UsersService {
         email: string;
         description?: string;
     }) {
-        const created = await this.users.create(data);
+        const created = await this.users.create({
+            ...data,
+            last_activity_at: new Date(),
+            is_last_activity_public: true,
+        });
         return this.sanitize(created.toObject() as UserLean);
     }
 
@@ -267,6 +318,7 @@ export class UsersService {
         return this.sanitize(result, {
             withNotifications: true,
             withSavedPosts: true,
+            viewerId: id,
         });
     }
 

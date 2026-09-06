@@ -102,4 +102,24 @@ export class TokenService {
             return null;
         }
     }
+
+    identifyAccess(token: string): string | null {
+        try {
+            const decoded = jwt.verify(token, this.accessKey(), {
+                ignoreExpiration: true,
+            }) as {
+                id?: string;
+                user_id?: string;
+                tokenType?: string;
+                typ?: string;
+            };
+            if (decoded.tokenType === 'refresh' || decoded.typ === 'refresh') {
+                return null;
+            }
+            const id = decoded.id || decoded.user_id;
+            return id ? String(id) : null;
+        } catch {
+            return null;
+        }
+    }
 }

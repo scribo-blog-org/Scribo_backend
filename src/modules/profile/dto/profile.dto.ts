@@ -36,6 +36,12 @@ export class UpdateProfileDto {
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Transform(toBoolean)
+    @IsBoolean()
+    isLastActivityPublic?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
     userAvatar?: unknown;
 }
 

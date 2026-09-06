@@ -20,5 +20,6 @@ import { UsersModule } from '../users/users.module';
         RegisterService,
         PasswordResetService,
     ],
+    exports: [TokenService],
 })
 export class AuthModule {}

@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AuthzModule } from './authz/authz.module';
 import { ApiEnvelopeInterceptor } from './common/api-envelope.interceptor';
+import { LastActivityInterceptor } from './common/last-activity.interceptor';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -42,6 +43,9 @@ import { SearchModule } from './modules/search/search.module';
         AnalyticsModule,
     ],
     controllers: [AppController],
-    providers: [{ provide: APP_INTERCEPTOR, useClass: ApiEnvelopeInterceptor }],
+    providers: [
+        { provide: APP_INTERCEPTOR, useClass: ApiEnvelopeInterceptor },
+        { provide: APP_INTERCEPTOR, useClass: LastActivityInterceptor },
+    ],
 })
 export class AppModule {}

@@ -1,98 +1,143 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Scribo API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+HTTP API for the Scribo blog platform: accounts, posts, comments, search, support, and admin analytics.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Built with **NestJS 11**, **MongoDB (Mongoose)**, and **JWT**. The live frontend is `Scribo_frontend` in the same workspace.
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Layer | Choice |
+| --- | --- |
+| Runtime | Node.js 22 |
+| Framework | NestJS 11 (Express adapter) |
+| Database | MongoDB via Mongoose 9 |
+| Auth | Access JWT (`Authorization: Bearer`) + `refresh_token` httpOnly cookie |
+| Uploads | AWS S3 |
+| Mail | Nodemailer (Gmail) |
+| Docs | OpenAPI 3 / Swagger |
 
-## Project setup
+## What it covers
 
-```bash
-$ npm install
-```
+- Email and Google registration / login, email verification codes, password reset
+- Session list, refresh, and logout (refresh cookie)
+- Profiles, follows, saved posts
+- Posts (CRUD, categories, hashtags, cover images, view counting on article fetch)
+- Nested comments
+- Full-text style search over posts and comments, hashtag suggest
+- Support tickets
+- Admin: users/roles, categories, logs, analytics dashboard data
+- RBAC: `user`, `author`, `moderator`, `admin`, `tech_admin`
 
-## Compile and run the project
+Every JSON response uses the envelope `{ status, message, data }`. Validation and domain errors follow the same shape.
 
-```bash
-# development
-$ npm run start
+## Requirements
 
-# watch mode
-$ npm run start:dev
+- Node.js **22.x**
+- MongoDB (Atlas URI or local)
+- Optional: AWS S3 (media), Gmail app password (mail), Google OAuth client on the frontend
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Setup
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cd Scribo_nest
+cp .env.example .env
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Fill `.env`, then:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Default listen address: `http://localhost:3001`.
 
-## Resources
+| Check | URL |
+| --- | --- |
+| Health (no `/api` prefix) | `GET /health` |
+| Ping | `GET /api` |
+| OpenAPI JSON (app envelope) | `GET /api/docs` |
+| Swagger UI | `GET /api/swagger` |
+| Raw OpenAPI JSON | `GET /api/docs-json` |
 
-Check out a few resources that may come in handy when working with NestJS:
+Pair with the frontend: set `FRONTEND_ORIGIN` to the Vite origin (usually `http://localhost:3000`) and set the frontend `VITE_APP_API_URL` to `http://localhost:3001`. CORS allows `FRONTEND_ORIGIN`, `*.vercel.app`, and local `http://localhost` / `http://127.0.0.1` when not in production.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Environment
 
-## Support
+Copy `.env.example`. Do not commit `.env`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `PORT` | no | Default `3001` |
+| `MONGODB_URI` | yes* | Preferred connection string |
+| `DB_USER` / `DB_PASSWORD` | yes* | Used only if `MONGODB_URI` is empty (legacy Atlas URL) |
+| `JWTKEY` | yes | Access-token secret |
+| `JWT_REFRESH_KEY` | no | Refresh-token secret; falls back to `JWTKEY` |
+| `PASSWORD_SALT` | no | bcrypt rounds, default `10` |
+| `FRONTEND_ORIGIN` | yes in prod | Allowed browser origin for CORS and email links |
+| `API_ORIGIN` | no | Public API origin in OpenAPI (`http://localhost:3001` locally) |
+| `COOKIE_SECURE` | no | Force Secure cookies (`true` / `false`); otherwise inferred from the request |
+| `MAIL_SENDER` | for mail | Gmail address |
+| `MAIL_PASSWORD` | for mail | Gmail app password |
+| `AWS_CONNECT_ACCESS_KEY` | for uploads | S3 access key |
+| `AWS_CONNECT_SECRET_ACCESS_KEY` | for uploads | S3 secret |
+| `AWS_CONNECT_REGION` | for uploads | e.g. `eu-central-1` |
+| `AWS_CONNECT_BUCKET_NAME` | for uploads | Bucket name |
 
-## Stay in touch
+\* Provide either `MONGODB_URI` or both `DB_USER` and `DB_PASSWORD`.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Scripts
 
-## License
+```bash
+npm run start:dev    # watch
+npm run start        # once
+npm run start:prod   # node dist/main (after build)
+npm run build
+npm run lint         # ESLint --fix
+npm run lint:check
+npm run format       # Prettier
+npm run test         # unit (Jest)
+npm run test:e2e
+npm run test:cov
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Layout
+
+```
+src/
+  main.ts                 bootstrap
+  create-app.ts           CORS, cookies, validation, Swagger
+  app.module.ts
+  authz/                  JWT guard, permissions, roles
+  common/                 envelope, mail, S3, rate limit, OpenAPI handle
+  database/               Mongoose module + schemas
+  modules/
+    auth/                 register, login, sessions, reset
+    users/                admin user + role APIs
+    profile/
+    categories/
+    posts/                posts + comments
+    search/
+    support/
+    logs/
+    analytics/
+```
+
+Guards: routes are authenticated by default. Mark public handlers with `@Public()`; use `@OptionalAuth()` when a view should work for guests but still attach a user when a token is present (article views).
+
+## Auth (clients)
+
+1. Login/register returns `accessToken` in `data` and sets `refresh_token` (httpOnly).
+2. Send `Authorization: Bearer <accessToken>` on API calls.
+3. Send cookies (`credentials: include`) on `POST /api/auth/refresh`.
+4. Google login sends the Google access token as `googleToken`; the API calls Google userinfo. The OAuth client id lives on the frontend.
+
+Rate limits apply to sensitive routes (auth, views). Hitting a view-rate limit skips the increment instead of returning 429.
+
+## Production notes
+
+- Set `NODE_ENV=production` (or Vercel production). Localhost CORS shortcuts are then off.
+- `trust proxy` is enabled so Secure cookies and client IP work behind Vercel / a reverse proxy.
+- Keep JWT secrets and Mongo credentials only in the host’s env store.
+
+The older Express app in `Scribo_backend` is not this API.

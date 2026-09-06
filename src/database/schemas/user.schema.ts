@@ -36,6 +36,9 @@ export class User {
     @Prop({ required: true, default: Date.now })
     created_date!: Date;
 
+    @Prop({ required: true, default: Date.now })
+    last_activity_at!: Date;
+
     @Prop({ required: true, default: false })
     is_admin!: boolean;
 
@@ -55,6 +58,9 @@ export class User {
 
     @Prop({ required: true, default: true })
     is_saved_posts_public!: boolean;
+
+    @Prop({ required: true, default: true })
+    is_last_activity_public!: boolean;
 
     @Prop({ type: [{ type: Types.ObjectId, ref: 'Post' }], default: [] })
     saved_posts!: Types.ObjectId[];
