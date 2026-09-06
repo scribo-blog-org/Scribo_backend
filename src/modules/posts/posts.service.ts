@@ -19,6 +19,7 @@ import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
 import { UsersService } from '../users/users.service';
 import { CommentsService } from './comments.service';
+import { tryConsume } from '../../common/rate-limit.guard';
 
 @Injectable()
 export class PostsService {
@@ -100,6 +101,9 @@ export class PostsService {
         const commentsByPost = await this.commentsService.forPosts(
             items.map((post) => post._id),
         );
+        const commentCounts = await this.commentsService.countsByPost(
+            items.map((post) => post._id),
+        );
 
         let authorMap = new Map<string, unknown>();
         if (expand.includes('author')) {
@@ -125,6 +129,8 @@ export class PostsService {
             items: items.map((post) => ({
                 ...post,
                 comments: commentsByPost.get(String(post._id)) || [],
+                comments_count: commentCounts.get(String(post._id)) || 0,
+                views_count: Number(post.views_count || 0),
                 author: expand.includes('author')
                     ? authorMap.get(String(post.author)) || null
                     : post.author,
@@ -141,10 +147,18 @@ export class PostsService {
         };
     }
 
-    async getById(id: string, expand?: string) {
+    async getById(
+        id: string,
+        expand?: string,
+        view?: { viewerKey?: string; count?: boolean },
+    ) {
         const post = await this.posts.findById(id).lean();
         if (!post) {
             throw new NotFoundException('Post not found!');
+        }
+        let viewsCount = Number(post.views_count || 0);
+        if (view?.count && view.viewerKey) {
+            viewsCount = await this.recordView(id, view.viewerKey, viewsCount);
         }
         const flags = String(expand || '')
             .split(',')
@@ -153,7 +167,15 @@ export class PostsService {
             id,
             flags.includes('comments') ? 'author' : undefined,
         );
-        const result: Record<string, unknown> = { ...post, comments };
+        const commentsCount = await this.comments.countDocuments({
+            post_id: { $in: [post._id, String(post._id)] },
+        });
+        const result: Record<string, unknown> = {
+            ...post,
+            comments,
+            comments_count: commentsCount,
+            views_count: viewsCount,
+        };
         if (flags.includes('author')) {
             const authors = await this.usersService.getPublicByIds([
                 post.author,
@@ -166,6 +188,23 @@ export class PostsService {
                 .lean();
         }
         return result;
+    }
+
+    private async recordView(
+        postId: string,
+        viewerKey: string,
+        current: number,
+    ) {
+        if (
+            !tryConsume(`post-view:${viewerKey}:${postId}`, 60_000, 20)
+        ) {
+            return current;
+        }
+        await this.posts.updateOne(
+            { _id: postId },
+            { $inc: { views_count: 1 } },
+        );
+        return current + 1;
     }
 
     async create(
@@ -307,7 +346,9 @@ export class PostsService {
         );
 
         await this.usersService.removePostFromSavedForUsers(id);
-        const comments = await this.comments.find({ post_id: id }).lean();
+        const comments = await this.comments
+            .find({ post_id: { $in: [id, new Types.ObjectId(id)] } })
+            .lean();
         const commentIds = comments.map((comment) => comment._id);
         if (commentIds.length) {
             await this.comments.deleteMany({ _id: { $in: commentIds } });

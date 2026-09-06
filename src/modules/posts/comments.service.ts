@@ -12,6 +12,12 @@ import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
 import { UsersService } from '../users/users.service';
 
+function postIdMatch(id: Types.ObjectId | string) {
+    const objectId =
+        id instanceof Types.ObjectId ? id : new Types.ObjectId(String(id));
+    return { $in: [objectId, String(objectId)] };
+}
+
 export type CommentLean = {
     _id: Types.ObjectId;
     author: unknown;
@@ -48,6 +54,8 @@ export class CommentsService {
             const parent = commentMap.get(String(comment.parent_comment_id));
             if (parent) {
                 parent.replies!.push(comment);
+            } else {
+                roots.push(comment);
             }
         }
 
@@ -82,10 +90,40 @@ export class CommentsService {
         return comments;
     }
 
+    async countsByPost(postIds: Types.ObjectId[]) {
+        if (!postIds.length) {
+            return new Map<string, number>();
+        }
+        const rows = await this.comments.aggregate<{
+            _id: Types.ObjectId;
+            count: number;
+        }>([
+            {
+                $match: {
+                    post_id: {
+                        $in: postIds.flatMap((id) => [id, String(id)]),
+                    },
+                },
+            },
+            { $group: { _id: '$post_id', count: { $sum: 1 } } },
+        ]);
+        const counts = new Map<string, number>();
+        for (const row of rows) {
+            const key = String(row._id);
+            counts.set(key, (counts.get(key) || 0) + row.count);
+        }
+        return counts;
+    }
+
     async forPosts(postIds: Types.ObjectId[]) {
+        if (!postIds.length) {
+            return new Map<string, CommentLean[]>();
+        }
         const comments = await this.comments
             .find({
-                post_id: { $in: postIds },
+                post_id: {
+                    $in: postIds.flatMap((id) => [id, String(id)]),
+                },
             })
             .lean<CommentLean[]>();
         return this.treesByPost(comments);
@@ -97,7 +135,7 @@ export class CommentsService {
             throw new NotFoundException('Post not found!');
         }
         const comments = await this.comments
-            .find({ post_id: postId })
+            .find({ post_id: postIdMatch(post._id) })
             .lean<CommentLean[]>();
         if (
             expand === 'author' ||
@@ -134,7 +172,7 @@ export class CommentsService {
                 );
             }
             const result = await this.comments.create({
-                post_id: postId,
+                post_id: post._id,
                 comment_text: commentText,
                 author: actor.id,
                 parent_comment_id: parentCommentId,
@@ -151,7 +189,7 @@ export class CommentsService {
         }
 
         const result = await this.comments.create({
-            post_id: postId,
+            post_id: post._id,
             comment_text: commentText,
             author: actor.id,
         });
@@ -183,7 +221,7 @@ export class CommentsService {
         }
 
         const comments = await this.comments
-            .find({ post_id: root.post_id })
+            .find({ post_id: postIdMatch(root.post_id) })
             .lean<CommentLean[]>();
         const ids = this.idsToDelete(comments, root._id);
         const result = await this.comments.deleteMany({ _id: { $in: ids } });

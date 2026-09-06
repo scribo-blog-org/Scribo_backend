@@ -43,6 +43,21 @@ function consume(key: string, windowMs: number, max: number) {
     return bucket.count <= max;
 }
 
+export function tryConsume(key: string, windowMs: number, max: number) {
+    const now = Date.now();
+    prune(now);
+    let bucket = buckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+        bucket = { count: 0, resetAt: now + windowMs };
+        buckets.set(key, bucket);
+    }
+    if (bucket.count >= max) {
+        return false;
+    }
+    bucket.count += 1;
+    return true;
+}
+
 @Injectable()
 export class RateLimitGuard implements CanActivate {
     constructor(private readonly reflector: Reflector) {}

@@ -28,6 +28,9 @@ export class Post {
 
     @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
     likes!: Types.ObjectId[];
+
+    @Prop({ type: Number, default: 0, min: 0 })
+    views_count!: number;
 }
 
 export type PostDocument = HydratedDocument<Post>;
