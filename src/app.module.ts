@@ -15,6 +15,7 @@ import { InfraModule } from './common/infra.module';
 import { SupportModule } from './modules/support/support.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
         ProfileModule,
         CategoriesModule,
         PostsModule,
+        SearchModule,
         SupportModule,
         LogsModule,
         AnalyticsModule,

@@ -7,15 +7,18 @@ import {
     Patch,
     Post,
     Query,
+    Req,
     UploadedFile,
     UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { CurrentUser } from '../../authz/decorators/current-user.decorator';
-import { Public } from '../../authz/decorators/public.decorator';
+import { OptionalAuth, Public } from '../../authz/decorators/public.decorator';
 import { RequirePermissions } from '../../authz/decorators/require-permissions.decorator';
 import { PERMISSIONS } from '../../authz/permissions';
 import type { Actor } from '../../authz/policy';
+import { clientIp } from '../../common/geo';
 import { ListPostsQueryDto } from '../../common/query.dto';
 import { imageFileInterceptor } from '../../common/upload';
 import { CommentsService } from './comments.service';
@@ -109,10 +112,20 @@ export class PostsController {
         return { status: true, message: 'Post unliked successfully!', data };
     }
 
-    @Public()
+    @OptionalAuth()
     @Get(':id')
-    async get(@Param('id') id: string, @Query('expand') expand?: string) {
-        const data = await this.posts.getById(id, expand);
+    async get(
+        @Req() req: Request,
+        @Param('id') id: string,
+        @Query('expand') expand?: string,
+        @Query('view') view?: string,
+        @CurrentUser() actor?: Actor,
+    ) {
+        const countView = view === '1' || view === 'true';
+        const data = await this.posts.getById(id, expand, {
+            count: countView,
+            viewerKey: actor?.id || clientIp(req) || 'anon',
+        });
         return { status: true, message: 'Post fetched successfully!', data };
     }
 

@@ -16,6 +16,10 @@ import {
 } from './schemas/support-request.schema';
 import { AppLog, AppLogSchema } from './schemas/log.schema';
 import { PageView, PageViewSchema } from './schemas/page-view.schema';
+import {
+    SearchQueryLog,
+    SearchQueryLogSchema,
+} from './schemas/search-query.schema';
 
 @Module({
     imports: [
@@ -54,6 +58,7 @@ import { PageView, PageViewSchema } from './schemas/page-view.schema';
             { name: SupportRequest.name, schema: SupportRequestSchema },
             { name: AppLog.name, schema: AppLogSchema },
             { name: PageView.name, schema: PageViewSchema },
+            { name: SearchQueryLog.name, schema: SearchQueryLogSchema },
         ]),
     ],
     exports: [MongooseModule],

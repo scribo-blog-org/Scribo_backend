@@ -12,6 +12,7 @@ import { PageView } from '../../database/schemas/page-view.schema';
 import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
 import { User } from '../../database/schemas/user.schema';
+import { SearchQueryLog } from '../../database/schemas/search-query.schema';
 
 const DEDUPE_MS = 8000;
 const SESSION_MS = 30 * 60 * 1000;
@@ -26,6 +27,8 @@ export class AnalyticsService {
         private readonly comments: Model<PostComment>,
         @InjectModel(Category.name) private readonly categories: Model<Category>,
         @InjectModel(AppLog.name) private readonly logs: Model<AppLog>,
+        @InjectModel(SearchQueryLog.name)
+        private readonly searchLogs: Model<SearchQueryLog>,
     ) {}
 
     private utcDayString(date: Date) {
@@ -187,6 +190,9 @@ export class AnalyticsService {
             devices,
             category_posts,
             activity,
+            searchInsights,
+            contentTags,
+            topPosts,
         ] = await Promise.all([
             this.pageViews.countDocuments(currentMatch),
             this.pageViews.countDocuments({ ...currentMatch, is_entry: true }),
@@ -311,6 +317,14 @@ export class AnalyticsService {
                 { $group: { _id: '$type', count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
             ]),
+            this.searchInsights(from, previousFrom),
+            this.contentHashtags(),
+            this.posts
+                .find()
+                .select('_id title views_count')
+                .sort({ views_count: -1 })
+                .limit(8)
+                .lean(),
         ]);
 
         return {
@@ -329,6 +343,14 @@ export class AnalyticsService {
                 posts,
                 comments,
                 likes,
+                searches: searchInsights.searches,
+                searches_prev: searchInsights.searches_prev,
+                empty_searches: searchInsights.empty,
+                empty_searches_prev: searchInsights.empty_prev,
+                hashtag_searches: searchInsights.hashtag_searches,
+                unique_search_queries: searchInsights.unique_queries,
+                posts_with_hashtags: contentTags.posts_with_hashtags,
+                unique_hashtags: contentTags.unique_hashtags,
                 entries_prev: previousEntries,
                 unique_visitors_prev: previousUnique,
                 unique_users_prev: previousUniqueUsers,
@@ -339,6 +361,7 @@ export class AnalyticsService {
                 entries: this.toMap(entrySeries as { _id: string; count: number }[]),
                 unique_visitors: this.toMap(uniqueSeries as { _id: string; count: number }[]),
                 pageviews: this.toMap(pageviewSeries as { _id: string; count: number }[]),
+                searches: this.toMap(searchInsights.series),
             }),
             top_paths: paths,
             cities,
@@ -349,6 +372,185 @@ export class AnalyticsService {
                 type: item._id,
                 count: item.count,
             })),
+            top_queries: searchInsights.top_queries,
+            top_hashtag_queries: searchInsights.top_hashtag_queries,
+            zero_queries: searchInsights.zero_queries,
+            top_hashtags: contentTags.top,
+            top_posts: (
+                topPosts as Array<{
+                    _id: unknown;
+                    title: string;
+                    views_count?: number;
+                }>
+            ).map((post) => ({
+                _id: post._id,
+                title: post.title,
+                views_count: Number(post.views_count || 0),
+            })),
+        };
+    }
+
+    private extractHashtags(text: string) {
+        const plain = String(text || '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&[a-zA-Z0-9#]+;/g, ' ')
+            .toLowerCase();
+        return plain.match(/#[^\s#]+/g) || [];
+    }
+
+    private async contentHashtags() {
+        const [postDocs, commentDocs] = await Promise.all([
+            this.posts
+                .find({
+                    $or: [
+                        { title: { $regex: '#' } },
+                        { content_text: { $regex: '#' } },
+                    ],
+                })
+                .select('title content_text')
+                .lean(),
+            this.comments
+                .find({ comment_text: { $regex: '#' } })
+                .select('comment_text')
+                .lean(),
+        ]);
+
+        const postsByTag = new Map<string, number>();
+        const commentsByTag = new Map<string, number>();
+        let postsWithTags = 0;
+
+        for (const post of postDocs) {
+            const tags = [
+                ...new Set(
+                    this.extractHashtags(`${post.title} ${post.content_text || ''}`),
+                ),
+            ];
+            if (!tags.length) {
+                continue;
+            }
+            postsWithTags += 1;
+            for (const tag of tags) {
+                postsByTag.set(tag, (postsByTag.get(tag) || 0) + 1);
+            }
+        }
+
+        for (const comment of commentDocs) {
+            const tags = [
+                ...new Set(this.extractHashtags(comment.comment_text || '')),
+            ];
+            for (const tag of tags) {
+                commentsByTag.set(tag, (commentsByTag.get(tag) || 0) + 1);
+            }
+        }
+
+        const tags = new Set([...postsByTag.keys(), ...commentsByTag.keys()]);
+        const top = [...tags]
+            .map((tag) => ({
+                tag,
+                posts: postsByTag.get(tag) || 0,
+                comments: commentsByTag.get(tag) || 0,
+                uses:
+                    (postsByTag.get(tag) || 0) + (commentsByTag.get(tag) || 0),
+            }))
+            .sort((a, b) => b.uses - a.uses || b.posts - a.posts)
+            .slice(0, 10);
+
+        return {
+            top,
+            posts_with_hashtags: postsWithTags,
+            unique_hashtags: tags.size,
+        };
+    }
+
+    private async searchInsights(from: Date, previousFrom: Date) {
+        const currentMatch = { created_at: { $gte: from } };
+        const previousMatch = {
+            created_at: { $gte: previousFrom, $lt: from },
+        };
+        const [
+            searches,
+            searches_prev,
+            empty,
+            empty_prev,
+            hashtag_searches,
+            unique_queries,
+            series,
+            top_queries,
+            top_hashtag_queries,
+            zero_queries,
+        ] = await Promise.all([
+            this.searchLogs.countDocuments(currentMatch),
+            this.searchLogs.countDocuments(previousMatch),
+            this.searchLogs.countDocuments({ ...currentMatch, hits: 0 }),
+            this.searchLogs.countDocuments({ ...previousMatch, hits: 0 }),
+            this.searchLogs.countDocuments({
+                ...currentMatch,
+                kind: 'hashtag',
+            }),
+            this.searchLogs
+                .distinct('query', currentMatch)
+                .then((rows) => rows.filter(Boolean).length),
+            this.searchLogs.aggregate([
+                { $match: currentMatch },
+                {
+                    $group: {
+                        _id: this.dayKeyExpr('created_at'),
+                        count: { $sum: 1 },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]),
+            this.searchLogs.aggregate([
+                { $match: currentMatch },
+                {
+                    $group: {
+                        _id: '$query',
+                        count: { $sum: 1 },
+                        hits: { $sum: '$hits' },
+                        empty: {
+                            $sum: { $cond: [{ $eq: ['$hits', 0] }, 1, 0] },
+                        },
+                    },
+                },
+                { $sort: { count: -1 } },
+                { $limit: 8 },
+                {
+                    $project: {
+                        query: '$_id',
+                        count: 1,
+                        hits: 1,
+                        empty: 1,
+                        _id: 0,
+                    },
+                },
+            ]),
+            this.searchLogs.aggregate([
+                { $match: { ...currentMatch, kind: 'hashtag' } },
+                { $group: { _id: '$query', count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 8 },
+                { $project: { query: '$_id', count: 1, _id: 0 } },
+            ]),
+            this.searchLogs.aggregate([
+                { $match: { ...currentMatch, hits: 0 } },
+                { $group: { _id: '$query', count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 8 },
+                { $project: { query: '$_id', count: 1, _id: 0 } },
+            ]),
+        ]);
+
+        return {
+            searches,
+            searches_prev,
+            empty,
+            empty_prev,
+            hashtag_searches,
+            unique_queries,
+            series: series as { _id: string; count: number }[],
+            top_queries,
+            top_hashtag_queries,
+            zero_queries,
         };
     }
 
