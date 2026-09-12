@@ -8,6 +8,7 @@ import {
     Post,
     Query,
 } from '@nestjs/common';
+import { SocketService } from '../../socket/socket.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../authz/decorators/current-user.decorator';
 import { OptionalAuth } from '../../authz/decorators/public.decorator';
@@ -23,7 +24,7 @@ import { UsersService } from './users.service';
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-    constructor(private readonly users: UsersService) {}
+    constructor(private readonly users: UsersService, private readonly socket: SocketService) {}
 
     @OptionalAuth()
     @Get()

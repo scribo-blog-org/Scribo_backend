@@ -218,10 +218,14 @@ export class AuthController {
     ) {
         const tokens = await this.sessions.refreshSession(req, body);
         setRefreshCookie(res, tokens.refreshToken, req);
+
         return {
             status: true,
             message: 'Token refreshed',
-            data: { accessToken: tokens.accessToken },
+            data: {
+                accessToken: tokens.accessToken,
+                socketToken: tokens.socketToken,
+            },
         };
     }
 

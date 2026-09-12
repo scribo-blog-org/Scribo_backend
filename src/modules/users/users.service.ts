@@ -14,6 +14,7 @@ import { LoggerService } from '../../common/logger.service';
 import { tryConsume } from '../../common/rate-limit.guard';
 import { Session } from '../../database/schemas/session.schema';
 import { User } from '../../database/schemas/user.schema';
+import { SocketService } from 'src/socket/socket.service';
 
 type UserLean = {
     _id: Types.ObjectId;
@@ -36,6 +37,7 @@ export class UsersService implements OnModuleInit {
         @InjectModel(User.name) private readonly users: Model<User>,
         @InjectModel(Session.name) private readonly sessions: Model<Session>,
         private readonly logger: LoggerService,
+        private readonly socket: SocketService,
     ) {}
 
     async onModuleInit() {
@@ -93,7 +95,8 @@ export class UsersService implements OnModuleInit {
             delete copy.saved_posts;
         }
         if (!options.withNotifications) delete copy.notifications;
-        const isOwner = options.viewerId && String(copy._id) === options.viewerId;
+        const isOwner =
+            options.viewerId && String(copy._id) === options.viewerId;
         if (!isOwner && copy.is_last_activity_public === false) {
             delete copy.last_activity_at;
         }
@@ -122,7 +125,10 @@ export class UsersService implements OnModuleInit {
     }
 
     async getByNickName(nickName: string, viewerId?: string) {
-        const user = await this.getByQuery({ nick_name: nickName }, { viewerId });
+        const user = await this.getByQuery(
+            { nick_name: nickName },
+            { viewerId },
+        );
         if (!user) {
             throw new NotFoundException('User not found');
         }
@@ -181,16 +187,26 @@ export class UsersService implements OnModuleInit {
             throw new ConflictException('You are already following this user!');
         }
 
-        await this.users.findByIdAndUpdate(followed._id, {
-            $push: {
-                notifications: {
-                    is_read: false,
-                    time: new Date(),
-                    type: 'follow',
-                    user: follower._id,
+        const notificationUpdate = await this.users.findByIdAndUpdate(
+            followed._id,
+            {
+                $push: {
+                    notifications: {
+                        is_read: false,
+                        time: new Date(),
+                        type: 'follow',
+                        user: follower._id,
+                    },
                 },
             },
-        });
+            { returnDocument: 'after' },
+        );
+        if (notificationUpdate && notificationUpdate.notifications) {
+            this.socket.userNotification(
+                String(followed._id),
+                notificationUpdate.notifications,
+            );
+        }
 
         const followedDoc = await this.users
             .findByIdAndUpdate(
@@ -230,17 +246,6 @@ export class UsersService implements OnModuleInit {
             throw new ConflictException('You are not following this user!');
         }
 
-        await this.users.findByIdAndUpdate(followed._id, {
-            $push: {
-                notifications: {
-                    is_read: false,
-                    time: new Date(),
-                    type: 'unfollow',
-                    user: follower._id,
-                },
-            },
-        });
-
         const followedDoc = await this.users
             .findByIdAndUpdate(
                 followed._id,
@@ -277,13 +282,14 @@ export class UsersService implements OnModuleInit {
         }
 
         const result = await this.users
-            .findByIdAndUpdate(user._id, { role: newRole }, { returnDocument: 'after' })
+            .findByIdAndUpdate(
+                user._id,
+                { role: newRole },
+                { returnDocument: 'after' },
+            )
             .lean<UserLean>();
         await this.sessions.deleteMany({
-            $or: [
-                { user: user._id },
-                { user: String(user._id) },
-            ],
+            $or: [{ user: user._id }, { user: String(user._id) }],
         });
         await this.logger.log({
             type: 'update_role',
@@ -313,7 +319,11 @@ export class UsersService implements OnModuleInit {
 
     async updateById(id: string, fields: Record<string, unknown>) {
         const result = await this.users
-            .findByIdAndUpdate(id, { $set: fields }, { returnDocument: 'after' })
+            .findByIdAndUpdate(
+                id,
+                { $set: fields },
+                { returnDocument: 'after' },
+            )
             .lean<UserLean>();
         return this.sanitize(result, {
             withNotifications: true,
