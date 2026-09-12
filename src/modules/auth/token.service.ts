@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import type { Role } from '../../authz/roles';
 
@@ -39,6 +40,62 @@ export class TokenService {
             payload.sessionId = String(sessionId);
         }
         return jwt.sign(payload, this.accessKey(), { expiresIn: ACCESS_TTL });
+    }
+
+    private formatPemKey(key: string, type: 'PUBLIC' | 'PRIVATE') {
+        const cleaned = key
+            .replace(/\\n/g, '\n')
+            .replace(new RegExp(`-----BEGIN ${type} KEY-----`, 'g'), '')
+            .replace(new RegExp(`-----END ${type} KEY-----`, 'g'), '')
+            .replace(/[^A-Za-z0-9+/=]/g, '');
+
+        const chunked = cleaned.match(/.{1,64}/g)?.join('\n') || '';
+
+        return `-----BEGIN ${type} KEY-----\n${chunked}\n-----END ${type} KEY-----`;
+    }
+
+    encodeSocket(user: any) {
+        const userId = String(user._id || user.id);
+        const now = Math.floor(Date.now() / 1000);
+        const expiresIn = 3600;
+
+        const payload = {
+            sub: userId,
+            id: userId,
+            role: 'authenticated',
+            aud: 'authenticated',
+            iat: now,
+            exp: now + expiresIn,
+        };
+
+        const rawKey = this.config.getOrThrow<string>('SOCKET_JWT_SECRET_KEY');
+        const kid = this.config.get<string>('SOCKET_JWT_KID');
+
+        const privateKey = crypto.createPrivateKey({
+            key: JSON.parse(rawKey),
+            format: 'jwk',
+        });
+
+        const signOptions: jwt.SignOptions = {
+            algorithm: 'RS256',
+        };
+
+        if (kid) {
+            signOptions.keyid = kid;
+        }
+
+        return jwt.sign(payload, privateKey, signOptions);
+    }
+
+    verifySocket(token: string) {
+        const rawKey = this.config.getOrThrow<string>('SOCKET_JWT_PUBLIC_KEY');
+
+        const publicKeyObject = crypto.createPublicKey({
+            key: JSON.parse(rawKey),
+            format: 'jwk',
+        });
+
+        return jwt.verify(token, publicKeyObject, { algorithms: ['RS256'] });
     }
 
     encodeRefresh(userId: unknown, sessionId: unknown) {

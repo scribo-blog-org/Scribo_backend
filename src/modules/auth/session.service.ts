@@ -147,6 +147,7 @@ export class SessionService implements OnModuleInit {
 
         return {
             accessToken: this.tokens.encodeAccess(user, String(sessionId)),
+            socketToken: this.tokens.encodeSocket(user),
             refreshToken,
         };
     }
@@ -216,11 +217,13 @@ export class SessionService implements OnModuleInit {
             }
             await this.sessions.findByIdAndUpdate(session._id, patch);
             this.users.touchLastActivity(String(user._id));
+
             return {
                 accessToken: this.tokens.encodeAccess(
                     user as never,
                     String(session._id),
                 ),
+                socketToken: this.tokens.encodeSocket(user),
                 refreshToken: token,
             };
         }
