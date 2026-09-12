@@ -199,6 +199,7 @@ export class UsersService implements OnModuleInit {
                     },
                 },
             },
+            { returnDocument: 'after' },
         );
         if (notificationUpdate && notificationUpdate.notifications) {
             this.socket.userNotification(
@@ -244,17 +245,6 @@ export class UsersService implements OnModuleInit {
         ) {
             throw new ConflictException('You are not following this user!');
         }
-
-        await this.users.findByIdAndUpdate(followed._id, {
-            $push: {
-                notifications: {
-                    is_read: false,
-                    time: new Date(),
-                    type: 'unfollow',
-                    user: follower._id,
-                },
-            },
-        });
 
         const followedDoc = await this.users
             .findByIdAndUpdate(
