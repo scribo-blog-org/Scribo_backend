@@ -11,10 +11,11 @@ import { canManageRole } from '../../authz/policy';
 import type { Actor } from '../../authz/policy';
 import type { Role } from '../../authz/roles';
 import { LoggerService } from '../../common/logger.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { tryConsume } from '../../common/rate-limit.guard';
 import { Session } from '../../database/schemas/session.schema';
 import { User } from '../../database/schemas/user.schema';
-import { SocketService } from 'src/socket/socket.service';
+import type { CreateNotification } from '../notifications/notifications.type';
 
 type UserLean = {
     _id: Types.ObjectId;
@@ -37,7 +38,7 @@ export class UsersService implements OnModuleInit {
         @InjectModel(User.name) private readonly users: Model<User>,
         @InjectModel(Session.name) private readonly sessions: Model<Session>,
         private readonly logger: LoggerService,
-        private readonly socket: SocketService,
+        private readonly notificationsService: NotificationsService,
     ) {}
 
     async onModuleInit() {
@@ -187,26 +188,13 @@ export class UsersService implements OnModuleInit {
             throw new ConflictException('You are already following this user!');
         }
 
-        const notificationUpdate = await this.users.findByIdAndUpdate(
-            followed._id,
+        await this.notificationsService.sendNotification(
+            followed._id.toString(),
             {
-                $push: {
-                    notifications: {
-                        is_read: false,
-                        time: new Date(),
-                        type: 'follow',
-                        user: follower._id,
-                    },
-                },
+                type: 'follow',
+                user: actor.id,
             },
-            { returnDocument: 'after' },
         );
-        if (notificationUpdate && notificationUpdate.notifications) {
-            this.socket.userNotification(
-                String(followed._id),
-                notificationUpdate.notifications,
-            );
-        }
 
         const followedDoc = await this.users
             .findByIdAndUpdate(
@@ -373,53 +361,6 @@ export class UsersService implements OnModuleInit {
             .find({ _id: { $in: objectIds } })
             .select('_id nick_name avatar is_verified')
             .lean();
-    }
-
-    async addNotification(
-        userId: unknown,
-        notification: {
-            type: string;
-            user?: unknown;
-            post?: unknown;
-            comment?: unknown;
-            support_request?: string;
-            support_status?: string;
-        },
-    ) {
-        const types = [
-            'follow',
-            'unfollow',
-            'comment_post',
-            'reply_comment',
-            'like_post',
-            'support_reply',
-            'support_status',
-        ];
-        if (!types.includes(notification.type)) {
-            return null;
-        }
-
-        const payload: Record<string, unknown> = {
-            type: notification.type,
-            is_read: false,
-            time: new Date(),
-        };
-        if (notification.user)
-            payload.user = new Types.ObjectId(String(notification.user));
-        if (notification.post)
-            payload.post = new Types.ObjectId(String(notification.post));
-        if (notification.comment)
-            payload.comment = new Types.ObjectId(String(notification.comment));
-        if (notification.support_request)
-            payload.support_request = notification.support_request;
-        if (notification.support_status)
-            payload.support_status = notification.support_status;
-
-        return this.users.findByIdAndUpdate(
-            userId,
-            { $push: { notifications: payload } },
-            { returnDocument: 'after' },
-        );
     }
 
     async removeNotifications(filter: Record<string, unknown>) {

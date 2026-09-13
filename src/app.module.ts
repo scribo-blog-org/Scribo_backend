@@ -17,6 +17,7 @@ import { SupportModule } from './modules/support/support.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SearchModule } from './modules/search/search.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
     imports: [
@@ -41,6 +42,7 @@ import { SearchModule } from './modules/search/search.module';
         SupportModule,
         LogsModule,
         AnalyticsModule,
+        NotificationsModule,
     ],
     controllers: [AppController],
     providers: [

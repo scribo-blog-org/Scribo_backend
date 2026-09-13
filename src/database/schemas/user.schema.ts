@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { ROLE_VALUES, ROLES, type Role } from '../../authz/roles';
 import { FIELD_LIMITS } from '../../common/field-limits';
+import { Notification, NotificationSchema } from './notification.schema';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -71,8 +72,11 @@ export class User {
     @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
     followers!: Types.ObjectId[];
 
-    @Prop({ type: Array, default: [] })
-    notifications!: Record<string, unknown>[];
+    @Prop({
+        type: [NotificationSchema],
+        default: [],
+    })
+    notifications!: Notification[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto';
 import { Model, Types } from 'mongoose';
 import { PERMISSIONS } from '../../authz/permissions';
 import { hasPermission, type Actor } from '../../authz/policy';
+import { NotificationsService } from '../notifications/notifications.service';
 import { fieldError } from '../../common/http-errors';
 import { FIELD_LIMITS } from '../../common/field-limits';
 import { LoggerService } from '../../common/logger.service';
@@ -19,6 +20,7 @@ import type { ListSupportQueryDto } from '../../common/query.dto';
 import { supportEmailTemplate } from '../../common/support-email';
 import { SupportRequest } from '../../database/schemas/support-request.schema';
 import { UsersService } from '../users/users.service';
+import { CreateNotification } from '../notifications/notifications.type';
 
 const KIND_LABELS: Record<string, string> = {
     complaint: 'Жалоба',
@@ -63,6 +65,7 @@ export class SupportService {
         @InjectModel(SupportRequest.name)
         private readonly tickets: Model<SupportRequest>,
         private readonly users: UsersService,
+        private readonly notifications: NotificationsService,
         private readonly mail: MailService,
         private readonly logger: LoggerService,
         private readonly config: ConfigService,
@@ -202,15 +205,20 @@ export class SupportService {
 
     private async notifyTicketOwner(
         item: SupportLean,
-        notification: {
-            type: string;
-            user?: unknown;
-            support_request?: string;
-            support_status?: string;
+        notification: CreateNotification,
+        emailPayload: {
+            title: string;
+            intro: string;
+            message?: string;
         },
     ) {
-        if (!item.user || this.isAnonymousTicket(item)) return;
-        await this.users.addNotification(item.user, notification);
+        this.notifyAnonymousByEmail(item, emailPayload);
+        if (item.user) {
+            await this.notifications.sendNotification(
+                String(item.user),
+                notification,
+            );
+        }
     }
 
     private notifyAnonymousByEmail(
@@ -246,7 +254,11 @@ export class SupportService {
     private assertReplyText(text: string) {
         const message = String(text || '').trim();
         if (!message) {
-            throw fieldError('replyText', 'Reply text must be not empty!', text);
+            throw fieldError(
+                'replyText',
+                'Reply text must be not empty!',
+                text,
+            );
         }
         if (message.length > FIELD_LIMITS.supportReply.max) {
             throw fieldError(
@@ -353,7 +365,8 @@ export class SupportService {
         }
         const { page, limit, skip } = parsePagination(query, 9, 50);
         const filter: Record<string, unknown> = {};
-        if (query.status) Object.assign(filter, this.statusFilter(query.status));
+        if (query.status)
+            Object.assign(filter, this.statusFilter(query.status));
         if (query.kind) filter.kind = query.kind;
         const sortField = SORT_FIELDS[query.sort || ''] || 'created_date';
         const sortOrder = query.order === 'asc' ? 1 : -1;
@@ -450,16 +463,19 @@ export class SupportService {
                 { returnDocument: 'after' },
             )
             .lean<SupportLean>();
-        this.notifyAnonymousByEmail(existing, {
-            title: 'Новый ответ по вашему запросу',
-            intro: 'Команда Scribo ответила на ваше обращение. Посмотреть ответ можно на странице запроса.',
-            message,
-        });
-        await this.notifyTicketOwner(existing, {
-            type: 'support_reply',
-            user: actor.id,
-            support_request: existing.access_key,
-        });
+        await this.notifyTicketOwner(
+            existing,
+            {
+                type: 'support_reply',
+                user: actor.id,
+                support_request: existing.access_key,
+            },
+            {
+                title: 'Новый ответ по вашему запросу',
+                intro: 'Команда Scribo ответила на ваше обращение. Посмотреть ответ можно на странице запроса.',
+                message,
+            },
+        );
         await this.logger.log({
             type: 'reply_support_request',
             message: `User replied to support request ${existing._id}`,
@@ -471,7 +487,11 @@ export class SupportService {
                 author_type: 'staff',
             },
         });
-        return this.withAccessFlags(await this.toDetail(updated!), updated!, actor);
+        return this.withAccessFlags(
+            await this.toDetail(updated!),
+            updated!,
+            actor,
+        );
     }
 
     async replyPublic(accessKey: string, replyText: string, actor?: Actor) {
@@ -500,16 +520,19 @@ export class SupportService {
             )
             .lean<SupportLean>();
         if (asStaff) {
-            this.notifyAnonymousByEmail(existing, {
-                title: 'Новый ответ по вашему запросу',
-                intro: 'Команда Scribo ответила на ваше обращение. Посмотреть ответ можно на странице запроса.',
-                message,
-            });
-            await this.notifyTicketOwner(existing, {
-                type: 'support_reply',
-                user: actor?.id,
-                support_request: existing.access_key,
-            });
+            await this.notifyTicketOwner(
+                existing,
+                {
+                    type: 'support_reply',
+                    user: actor?.id,
+                    support_request: existing.access_key,
+                },
+                {
+                    title: 'Новый ответ по вашему запросу',
+                    intro: 'Команда Scribo ответила на ваше обращение. Посмотреть ответ можно на странице запроса.',
+                    message,
+                },
+            );
         }
         await this.logger.log({
             type: 'reply_support_request',
@@ -524,7 +547,11 @@ export class SupportService {
                 author_type: asStaff ? 'staff' : 'requester',
             },
         });
-        return this.withAccessFlags(await this.toDetail(updated!), updated!, actor);
+        return this.withAccessFlags(
+            await this.toDetail(updated!),
+            updated!,
+            actor,
+        );
     }
 
     async updateStatus(id: string, supportStatus: string, actor: Actor) {
@@ -559,16 +586,19 @@ export class SupportService {
             )
             .lean<SupportLean>();
         const statusLabel = STATUS_LABELS[nextStatus];
-        this.notifyAnonymousByEmail(existing, {
-            title: 'Статус вашего запроса изменён',
-            intro: `Статус обращения обновлён: ${statusLabel}. Открыть обращение можно на странице запроса.`,
-        });
-        await this.notifyTicketOwner(existing, {
-            type: 'support_status',
-            user: actor.id,
-            support_request: existing.access_key,
-            support_status: nextStatus,
-        });
+        await this.notifyTicketOwner(
+            existing,
+            {
+                type: 'support_status',
+                user: actor.id,
+                support_request: existing.access_key,
+                support_status: nextStatus,
+            },
+            {
+                title: 'Статус вашего запроса изменён',
+                intro: `Статус обращения обновлён: ${statusLabel}. Открыть обращение можно на странице запроса.`,
+            },
+        );
         await this.logger.log({
             type: 'update_support_status',
             message: `User updated support request ${existing._id} status to ${nextStatus}`,
@@ -581,6 +611,10 @@ export class SupportService {
                 previous_status: this.normalizeStatus(existing.status),
             },
         });
-        return this.withAccessFlags(await this.toDetail(updated!), updated!, actor);
+        return this.withAccessFlags(
+            await this.toDetail(updated!),
+            updated!,
+            actor,
+        );
     }
 }
