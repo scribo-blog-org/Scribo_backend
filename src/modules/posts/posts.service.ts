@@ -20,6 +20,7 @@ import { PostComment } from '../../database/schemas/post-comment.schema';
 import { UsersService } from '../users/users.service';
 import { CommentsService } from './comments.service';
 import { tryConsume } from '../../common/rate-limit.guard';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PostsService {
@@ -31,6 +32,7 @@ export class PostsService {
         private readonly categories: Model<Category>,
         private readonly commentsService: CommentsService,
         private readonly usersService: UsersService,
+        private readonly notifications: NotificationsService,
         private readonly storage: StorageService,
         private readonly logger: LoggerService,
     ) {}
@@ -430,7 +432,7 @@ export class PostsService {
             )
             .lean();
         if (String(post.author) !== actor.id) {
-            await this.usersService.addNotification(post.author, {
+            await this.notifications.sendNotification(String(post.author), {
                 type: 'like_post',
                 user: actor.id,
                 post: id,

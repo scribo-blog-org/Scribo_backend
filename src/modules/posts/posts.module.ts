@@ -5,9 +5,10 @@ import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [DatabaseModule, UsersModule],
+    imports: [DatabaseModule, UsersModule, NotificationsModule],
     controllers: [PostsController, CommentsController],
     providers: [PostsService, CommentsService],
 })

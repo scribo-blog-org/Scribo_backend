@@ -4,6 +4,7 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PERMISSIONS } from '../../authz/permissions';
@@ -35,6 +36,7 @@ export class CommentsService {
         private readonly comments: Model<PostComment>,
         @InjectModel(Post.name) private readonly posts: Model<Post>,
         private readonly users: UsersService,
+        private readonly notifications: NotificationsService,
     ) {}
 
     buildTree(comments: CommentLean[]) {
@@ -178,12 +180,15 @@ export class CommentsService {
                 parent_comment_id: parentCommentId,
             });
             if (String(parent.author) !== actor.id) {
-                await this.users.addNotification(parent.author, {
-                    type: 'reply_comment',
-                    user: actor.id,
-                    comment: result._id,
-                    post: postId,
-                });
+                await this.notifications.sendNotification(
+                    String(parent.author),
+                    {
+                        type: 'reply_comment',
+                        user: actor.id,
+                        comment: String(result._id),
+                        post: postId,
+                    },
+                );
             }
             return result.toObject();
         }
@@ -194,11 +199,11 @@ export class CommentsService {
             author: actor.id,
         });
         if (String(post.author) !== actor.id) {
-            await this.users.addNotification(post.author, {
+            await this.notifications.sendNotification(String(post.author), {
                 type: 'comment_post',
                 user: actor.id,
                 post: postId,
-                comment: result._id,
+                comment: String(result._id),
             });
         }
         return result.toObject();
