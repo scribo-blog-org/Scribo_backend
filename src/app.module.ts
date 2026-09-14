@@ -18,6 +18,7 @@ import { LogsModule } from './modules/logs/logs.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SearchModule } from './modules/search/search.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
     imports: [
@@ -43,6 +44,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
         LogsModule,
         AnalyticsModule,
         NotificationsModule,
+        ChatModule,
     ],
     controllers: [AppController],
     providers: [

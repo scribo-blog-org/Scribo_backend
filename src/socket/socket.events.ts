@@ -5,6 +5,10 @@ import { SocketClient } from './socket.client';
 export class SocketEvents {
     constructor(private readonly socketClient: SocketClient) {}
 
+    chatRoom(conversationId: string) {
+        return `chat:${conversationId}`;
+    }
+
     private async broadcast(
         room: string,
         event: string,
@@ -31,6 +35,33 @@ export class SocketEvents {
     ): Promise<void> {
         await this.broadcast(`user:${userId}`, 'notification', {
             notifications,
+        });
+    }
+
+    async chatMessage(conversationId: string, message: unknown): Promise<void> {
+        await this.broadcast(this.chatRoom(conversationId), 'chat:message', {
+            message,
+        });
+    }
+
+    async chatRead(conversationId: string, payload: unknown): Promise<void> {
+        await this.broadcast(
+            this.chatRoom(conversationId),
+            'chat:read',
+            payload,
+        );
+    }
+
+    async chatUnread(userId: string, unread: number): Promise<void> {
+        await this.broadcast(`user:${userId}`, 'chat:unread', { unread });
+    }
+
+    async chatConversation(
+        userId: string,
+        conversation: unknown,
+    ): Promise<void> {
+        await this.broadcast(`user:${userId}`, 'chat:conversation', {
+            conversation,
         });
     }
 }
