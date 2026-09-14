@@ -6,32 +6,8 @@ export class TrackVisitDto {
     @IsString()
     pagePath!: string;
 
-    @ApiProperty()
-    @IsString()
-    visitorId!: string;
-
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     pageReferrer?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    city?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    region?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    country?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    ip?: string;
 }

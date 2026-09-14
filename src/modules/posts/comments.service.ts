@@ -12,6 +12,7 @@ import { hasPermission, isResourceOwner, type Actor } from '../../authz/policy';
 import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
 import { UsersService } from '../users/users.service';
+import { LoggerService } from '../../common/logger.service';
 
 function postIdMatch(id: Types.ObjectId | string) {
     const objectId =
@@ -37,6 +38,7 @@ export class CommentsService {
         @InjectModel(Post.name) private readonly posts: Model<Post>,
         private readonly users: UsersService,
         private readonly notifications: NotificationsService,
+        private readonly logger: LoggerService,
     ) {}
 
     buildTree(comments: CommentLean[]) {
@@ -190,6 +192,15 @@ export class CommentsService {
                     },
                 );
             }
+            await this.logger.log({
+                type: 'reply_comment',
+                message: `User ${actor.nick_name} replied to comment ${parentCommentId}`,
+                data: {
+                    post: postId,
+                    comment: String(result._id),
+                    user: actor.id,
+                },
+            });
             return result.toObject();
         }
 
@@ -206,6 +217,15 @@ export class CommentsService {
                 comment: String(result._id),
             });
         }
+        await this.logger.log({
+            type: 'comment_post',
+            message: `User ${actor.nick_name} commented on post ${postId}`,
+            data: {
+                post: postId,
+                comment: String(result._id),
+                user: actor.id,
+            },
+        });
         return result.toObject();
     }
 
@@ -231,6 +251,16 @@ export class CommentsService {
         const ids = this.idsToDelete(comments, root._id);
         const result = await this.comments.deleteMany({ _id: { $in: ids } });
         await this.users.removeNotifications({ comment: { $in: ids } });
+        await this.logger.log({
+            type: 'delete_comment',
+            message: `User ${actor.nick_name} deleted comment ${commentId}`,
+            data: {
+                post: String(root.post_id),
+                comment: commentId,
+                user: actor.id,
+                removed: ids.length,
+            },
+        });
         return result;
     }
 
@@ -271,13 +301,23 @@ export class CommentsService {
                 "You don't have permission to edit this comment",
             );
         }
-        return this.comments
+        const updated = await this.comments
             .findByIdAndUpdate(
                 commentId,
                 { comment_text: commentText },
                 { returnDocument: 'after', runValidators: true },
             )
             .lean();
+        await this.logger.log({
+            type: 'update_comment',
+            message: `User ${actor.nick_name} edited comment ${commentId}`,
+            data: {
+                post: String(comment.post_id),
+                comment: commentId,
+                user: actor.id,
+            },
+        });
+        return updated;
     }
 
     async like(commentId: string, actor: Actor) {

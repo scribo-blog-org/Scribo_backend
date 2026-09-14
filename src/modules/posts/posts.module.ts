@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
+import { InfraModule } from '../../common/infra.module';
 import { UsersModule } from '../users/users.module';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
@@ -8,7 +9,7 @@ import { PostsService } from './posts.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [DatabaseModule, UsersModule, NotificationsModule],
+    imports: [DatabaseModule, InfraModule, UsersModule, NotificationsModule],
     controllers: [PostsController, CommentsController],
     providers: [PostsService, CommentsService],
 })

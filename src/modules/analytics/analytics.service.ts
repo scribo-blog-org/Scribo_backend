@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,6 +14,7 @@ import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
 import { User } from '../../database/schemas/user.schema';
 import { SearchQueryLog } from '../../database/schemas/search-query.schema';
+import { Session } from '../../database/schemas/session.schema';
 
 const DEDUPE_MS = 8000;
 const SESSION_MS = 30 * 60 * 1000;
@@ -29,6 +31,7 @@ export class AnalyticsService {
         @InjectModel(AppLog.name) private readonly logs: Model<AppLog>,
         @InjectModel(SearchQueryLog.name)
         private readonly searchLogs: Model<SearchQueryLog>,
+        @InjectModel(Session.name) private readonly sessions: Model<Session>,
     ) {}
 
     private utcDayString(date: Date) {
@@ -72,6 +75,21 @@ export class AnalyticsService {
         return map;
     }
 
+    private resolveVisitorId(actor: Actor | undefined, req: Request) {
+        if (actor?.id) {
+            return `u:${actor.id}`;
+        }
+
+        const ip = clientIp(req);
+        const userAgent = String(req.headers['user-agent'] || '');
+        const digest = createHash('sha256')
+            .update(`${ip}|${userAgent}`)
+            .digest('hex')
+            .slice(0, 32);
+
+        return `a:${digest}`;
+    }
+
     private fillDays(days: number, maps: Record<string, Map<string, number>>) {
         const start = this.rangeStart(days);
         const series = [];
@@ -91,25 +109,20 @@ export class AnalyticsService {
     async trackVisit(
         body: {
             pagePath?: string;
-            visitorId?: string;
             pageReferrer?: string;
-            city?: string;
-            region?: string;
-            country?: string;
-            ip?: string;
         },
         actor: Actor | undefined,
         req: Request,
     ) {
         const path = this.sanitizePath(body.pagePath);
-        const visitor_id = String(body.visitorId || '').slice(0, 64);
+        const visitor_id = this.resolveVisitorId(actor, req);
         const referrer = String(body.pageReferrer || '').slice(0, 500);
         const user =
             actor?.id && Types.ObjectId.isValid(actor.id)
                 ? new Types.ObjectId(actor.id)
                 : null;
         const ip = clientIp(req);
-        const geo = await lookupVisitorGeo(req, body);
+        const geo = await lookupVisitorGeo(req);
         const userAgent = String(req.headers['user-agent'] || '');
 
         const recent = await this.pageViews
@@ -146,6 +159,89 @@ export class AnalyticsService {
         return created.toObject();
     }
 
+    private withPercent<T extends Record<string, unknown>>(
+        items: T[],
+        valueKey: keyof T,
+    ) {
+        const total = items.reduce(
+            (sum, item) => sum + Number(item[valueKey] || 0),
+            0,
+        );
+
+        return items.map((item) => ({
+            ...item,
+            percent: total
+                ? Math.round((Number(item[valueKey] || 0) / total) * 100)
+                : 0,
+        }));
+    }
+
+    private async periodActivity(from: Date) {
+        const [
+            logRows,
+            commentsCreated,
+            logins,
+            newUsers,
+        ] = await Promise.all([
+            this.logs.aggregate([
+                {
+                    $match: {
+                        date_time: { $gte: from },
+                        type: {
+                            $in: [
+                                'create_post',
+                                'update_post',
+                                'delete_post',
+                                'register',
+                                'comment_post',
+                                'reply_comment',
+                                'update_comment',
+                                'delete_comment',
+                                'like_post',
+                            ],
+                        },
+                    },
+                },
+                { $group: { _id: '$type', count: { $sum: 1 } } },
+            ]),
+            this.comments.countDocuments({ created_date: { $gte: from } }),
+            this.sessions.countDocuments({ createdAt: { $gte: from } }),
+            this.users.countDocuments({ created_date: { $gte: from } }),
+        ]);
+
+        const counts = new Map(
+            (logRows as { _id: string; count: number }[]).map((row) => [
+                row._id,
+                row.count,
+            ]),
+        );
+
+        const commentsWritten =
+            commentsCreated ||
+            (counts.get('comment_post') || 0) +
+                (counts.get('reply_comment') || 0);
+
+        return {
+            posts: {
+                created: counts.get('create_post') || 0,
+                updated: counts.get('update_post') || 0,
+                deleted: counts.get('delete_post') || 0,
+            },
+            users: {
+                registered: newUsers || counts.get('register') || 0,
+                logins,
+            },
+            comments: {
+                created: commentsWritten,
+                updated: counts.get('update_comment') || 0,
+                deleted: counts.get('delete_comment') || 0,
+            },
+            likes: {
+                posts: counts.get('like_post') || 0,
+            },
+        };
+    }
+
     async getDashboard(query: { days?: string }, actor: Actor) {
         if (!hasPermission(actor, PERMISSIONS.VIEW_LOGS)) {
             throw new ForbiddenException(
@@ -161,71 +257,41 @@ export class AnalyticsService {
             ...base,
             user: { $exists: true, $ne: null },
         });
+        const anonymous = (base: object) => ({
+            ...base,
+            $or: [{ user: { $exists: false } }, { user: null }],
+        });
 
         const [
-            pageviews,
-            entries,
             unique_visitors,
-            unique_users,
-            authorized_visits,
-            previousPageviews,
-            previousEntries,
             previousUnique,
-            previousUniqueUsers,
-            previousAuthorized,
-            new_users,
-            new_posts,
-            new_comments,
-            categories,
-            registered_users,
-            posts,
-            comments,
-            likes,
-            pageviewSeries,
-            entrySeries,
+            authorized_visits,
+            anonymous_visits,
             uniqueSeries,
             paths,
-            cities,
-            recent,
-            devices,
-            category_posts,
-            activity,
             searchInsights,
             contentTags,
             topPosts,
-            recentUsers,
+            activity,
         ] = await Promise.all([
-            this.pageViews.countDocuments(currentMatch),
-            this.pageViews.countDocuments({ ...currentMatch, is_entry: true }),
-            this.pageViews.distinct('visitor_id', currentMatch).then((rows) => rows.filter(Boolean).length),
-            this.pageViews.distinct('user', authorized(currentMatch)).then((rows) => rows.filter(Boolean).length),
+            this.pageViews
+                .distinct('visitor_id', currentMatch)
+                .then((rows) => rows.filter(Boolean).length),
+            this.pageViews
+                .distinct('visitor_id', previousMatch)
+                .then((rows) => rows.filter(Boolean).length),
             this.pageViews.countDocuments(authorized(currentMatch)),
-            this.pageViews.countDocuments(previousMatch),
-            this.pageViews.countDocuments({ ...previousMatch, is_entry: true }),
-            this.pageViews.distinct('visitor_id', previousMatch).then((rows) => rows.filter(Boolean).length),
-            this.pageViews.distinct('user', authorized(previousMatch)).then((rows) => rows.filter(Boolean).length),
-            this.pageViews.countDocuments(authorized(previousMatch)),
-            this.users.countDocuments({ created_date: { $gte: from } }),
-            this.posts.countDocuments({ created_date: { $gte: from } }),
-            this.comments.countDocuments({ created_date: { $gte: from } }),
-            this.categories.estimatedDocumentCount(),
-            this.users.estimatedDocumentCount(),
-            this.posts.estimatedDocumentCount(),
-            this.comments.estimatedDocumentCount(),
-            this.likesTotal(),
-            this.pageViews.aggregate([
-                { $match: currentMatch },
-                { $group: { _id: this.dayKeyExpr('created_at'), count: { $sum: 1 } } },
-                { $sort: { _id: 1 } },
-            ]),
-            this.pageViews.aggregate([
-                { $match: { created_at: { $gte: from }, is_entry: true } },
-                { $group: { _id: this.dayKeyExpr('created_at'), count: { $sum: 1 } } },
-                { $sort: { _id: 1 } },
-            ]),
+            this.pageViews.countDocuments(anonymous(currentMatch)),
             this.pageViews.aggregate([
                 { $match: { created_at: { $gte: from } } },
-                { $group: { _id: { day: this.dayKeyExpr('created_at'), visitor: '$visitor_id' } } },
+                {
+                    $group: {
+                        _id: {
+                            day: this.dayKeyExpr('created_at'),
+                            visitor: '$visitor_id',
+                        },
+                    },
+                },
                 { $group: { _id: '$_id.day', count: { $sum: 1 } } },
                 { $sort: { _id: 1 } },
             ]),
@@ -247,142 +313,48 @@ export class AnalyticsService {
                     },
                 },
                 { $sort: { visits: -1 } },
-                { $limit: 8 },
-            ]),
-            this.pageViews.aggregate([
-                { $match: { created_at: { $gte: from } } },
-                {
-                    $group: {
-                        _id: {
-                            city: { $ifNull: ['$city', 'Неизвестно'] },
-                            country: { $ifNull: ['$country', ''] },
-                        },
-                        visits: { $sum: 1 },
-                        entries: { $sum: { $cond: ['$is_entry', 1, 0] } },
-                        unique_visitors: { $addToSet: '$visitor_id' },
-                    },
-                },
-                {
-                    $project: {
-                        city: '$_id.city',
-                        country: '$_id.country',
-                        visits: 1,
-                        entries: 1,
-                        unique_visitors: { $size: '$unique_visitors' },
-                        _id: 0,
-                    },
-                },
-                { $sort: { entries: -1, visits: -1 } },
-                { $limit: 12 },
-            ]),
-            this.pageViews
-                .find({ created_at: { $gte: from }, is_entry: true })
-                .sort({ created_at: -1 })
-                .limit(20)
-                .select({ created_at: 1, ip: 1, city: 1, region: 1, country: 1, path: 1 })
-                .lean(),
-            this.pageViews
-                .aggregate([
-                    { $match: { created_at: { $gte: from } } },
-                    { $group: { _id: { $ifNull: ['$device', ''] }, visits: { $sum: 1 } } },
-                    { $sort: { visits: -1 } },
-                ])
-                .then((rows) =>
-                    rows
-                        .filter((row) => row._id)
-                        .map((row) => ({ kind: row._id, visits: row.visits })),
-                ),
-            this.posts.aggregate([
-                { $group: { _id: '$category', posts: { $sum: 1 } } },
-                {
-                    $lookup: {
-                        from: 'categories',
-                        localField: '_id',
-                        foreignField: '_id',
-                        as: 'category',
-                    },
-                },
-                { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-                {
-                    $project: {
-                        name: { $ifNull: ['$category.name', 'Без категории'] },
-                        color: '$category.color',
-                        posts: 1,
-                        _id: 0,
-                    },
-                },
-                { $sort: { posts: -1 } },
-            ]),
-            this.logs.aggregate([
-                { $match: { date_time: { $gte: from } } },
-                { $group: { _id: '$type', count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
+                { $limit: 5 },
             ]),
             this.searchInsights(from, previousFrom),
-            this.contentHashtags(),
+            this.contentHashtags(5),
             this.posts
-                .find()
+                .find({ views_count: { $gt: 0 } })
                 .select('_id title views_count')
                 .sort({ views_count: -1 })
-                .limit(8)
-                .lean(),
-            this.users
-                .find()
-                .select('_id nick_name last_activity_at created_date')
-                .sort({ last_activity_at: -1 })
                 .limit(5)
                 .lean(),
+            this.periodActivity(from),
         ]);
+
+        const visitTotal = authorized_visits + anonymous_visits;
+        const audience = {
+            authorized_visits,
+            anonymous_visits,
+            authorized_percent: visitTotal
+                ? Math.round((authorized_visits / visitTotal) * 100)
+                : 0,
+            anonymous_percent: visitTotal
+                ? Math.round((anonymous_visits / visitTotal) * 100)
+                : 0,
+        };
 
         return {
             days,
             totals: {
-                entries,
                 unique_visitors,
-                unique_users,
-                authorized_visits,
-                pageviews,
-                new_users,
-                new_posts,
-                new_comments,
-                categories,
-                registered_users,
-                posts,
-                comments,
-                likes,
-                searches: searchInsights.searches,
-                searches_prev: searchInsights.searches_prev,
-                empty_searches: searchInsights.empty,
-                empty_searches_prev: searchInsights.empty_prev,
-                hashtag_searches: searchInsights.hashtag_searches,
-                unique_search_queries: searchInsights.unique_queries,
-                posts_with_hashtags: contentTags.posts_with_hashtags,
-                unique_hashtags: contentTags.unique_hashtags,
-                entries_prev: previousEntries,
                 unique_visitors_prev: previousUnique,
-                unique_users_prev: previousUniqueUsers,
-                authorized_visits_prev: previousAuthorized,
-                pageviews_prev: previousPageviews,
             },
             series: this.fillDays(days, {
-                entries: this.toMap(entrySeries as { _id: string; count: number }[]),
-                unique_visitors: this.toMap(uniqueSeries as { _id: string; count: number }[]),
-                pageviews: this.toMap(pageviewSeries as { _id: string; count: number }[]),
-                searches: this.toMap(searchInsights.series),
+                visitors: this.toMap(
+                    uniqueSeries as { _id: string; count: number }[],
+                ),
             }),
-            top_paths: paths,
-            cities,
-            devices,
-            categories: category_posts,
-            recent_entries: recent,
-            activity: (activity as { _id: string; count: number }[]).map((item) => ({
-                type: item._id,
-                count: item.count,
-            })),
-            top_queries: searchInsights.top_queries,
-            top_hashtag_queries: searchInsights.top_hashtag_queries,
-            zero_queries: searchInsights.zero_queries,
-            top_hashtags: contentTags.top,
+            activity,
+            audience,
+            top_paths: this.withPercent(
+                paths as Array<{ path: string; visits: number }>,
+                'visits',
+            ),
             top_posts: (
                 topPosts as Array<{
                     _id: unknown;
@@ -394,18 +366,22 @@ export class AnalyticsService {
                 title: post.title,
                 views_count: Number(post.views_count || 0),
             })),
-            recent_users: (
-                recentUsers as Array<{
-                    _id: unknown;
-                    nick_name: string;
-                    last_activity_at?: Date;
-                    created_date?: Date;
-                }>
-            ).map((user) => ({
-                _id: user._id,
-                nick_name: user.nick_name,
-                last_activity_at: user.last_activity_at || user.created_date,
-            })),
+            top_queries: this.withPercent(
+                searchInsights.top_queries as Array<{
+                    query: string;
+                    count: number;
+                }>,
+                'count',
+            ),
+            top_hashtags: this.withPercent(
+                contentTags.top as Array<{
+                    tag: string;
+                    uses: number;
+                    posts: number;
+                    comments: number;
+                }>,
+                'uses',
+            ),
         };
     }
 
@@ -417,7 +393,7 @@ export class AnalyticsService {
         return plain.match(/#[^\s#]+/g) || [];
     }
 
-    private async contentHashtags() {
+    private async contentHashtags(limit = 5) {
         const [postDocs, commentDocs] = await Promise.all([
             this.posts
                 .find({
@@ -472,7 +448,7 @@ export class AnalyticsService {
                     (postsByTag.get(tag) || 0) + (commentsByTag.get(tag) || 0),
             }))
             .sort((a, b) => b.uses - a.uses || b.posts - a.posts)
-            .slice(0, 10);
+            .slice(0, limit);
 
         return {
             top,
@@ -532,7 +508,7 @@ export class AnalyticsService {
                     },
                 },
                 { $sort: { count: -1 } },
-                { $limit: 8 },
+                { $limit: 5 },
                 {
                     $project: {
                         query: '$_id',
