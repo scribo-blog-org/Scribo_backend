@@ -20,6 +20,14 @@ import {
     SearchQueryLog,
     SearchQueryLogSchema,
 } from './schemas/search-query.schema';
+import {
+    Conversation,
+    ConversationSchema,
+} from './schemas/conversation.schema';
+import {
+    ChatMessage,
+    ChatMessageSchema,
+} from './schemas/chat-message.schema';
 
 @Module({
     imports: [
@@ -59,6 +67,8 @@ import {
             { name: AppLog.name, schema: AppLogSchema },
             { name: PageView.name, schema: PageViewSchema },
             { name: SearchQueryLog.name, schema: SearchQueryLogSchema },
+            { name: Conversation.name, schema: ConversationSchema },
+            { name: ChatMessage.name, schema: ChatMessageSchema },
         ]),
     ],
     exports: [MongooseModule],

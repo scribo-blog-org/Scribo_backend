@@ -438,6 +438,11 @@ export class PostsService {
                 post: id,
             });
         }
+        await this.logger.log({
+            type: 'like_post',
+            message: `User ${actor.nick_name} liked post ${id}`,
+            data: { post: id, user: actor.id },
+        });
         return { likes: result?.likes };
     }
 
