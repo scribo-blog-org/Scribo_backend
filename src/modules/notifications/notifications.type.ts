@@ -2,6 +2,8 @@ export const NOTIFICATION_TYPES = [
     'comment_post',
     'follow',
     'like_post',
+    'mention_comment',
+    'mention_post',
     'reply_comment',
     'support_reply',
     'support_status',

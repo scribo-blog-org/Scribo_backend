@@ -5,6 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MentionNotificationsService } from '../notifications/mention-notifications.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PERMISSIONS } from '../../authz/permissions';
@@ -38,6 +39,7 @@ export class CommentsService {
         @InjectModel(Post.name) private readonly posts: Model<Post>,
         private readonly users: UsersService,
         private readonly notifications: NotificationsService,
+        private readonly mentionNotifications: MentionNotificationsService,
         private readonly logger: LoggerService,
     ) {}
 
@@ -181,7 +183,14 @@ export class CommentsService {
                 author: actor.id,
                 parent_comment_id: parentCommentId,
             });
-            if (String(parent.author) !== actor.id) {
+            const mentionedUserIds =
+                await this.mentionNotifications.resolveMentionedUserIds(
+                    commentText,
+                );
+            if (
+                String(parent.author) !== actor.id &&
+                !mentionedUserIds.has(String(parent.author))
+            ) {
                 await this.notifications.sendNotification(
                     String(parent.author),
                     {
@@ -192,6 +201,13 @@ export class CommentsService {
                     },
                 );
             }
+            await this.mentionNotifications.notifyFromText({
+                actorId: actor.id,
+                text: commentText,
+                postId,
+                commentId: String(result._id),
+                excludeUserIds: [actor.id],
+            });
             await this.logger.log({
                 type: 'reply_comment',
                 message: `User ${actor.nick_name} replied to comment ${parentCommentId}`,
@@ -209,7 +225,14 @@ export class CommentsService {
             comment_text: commentText,
             author: actor.id,
         });
-        if (String(post.author) !== actor.id) {
+        const mentionedUserIds =
+            await this.mentionNotifications.resolveMentionedUserIds(
+                commentText,
+            );
+        if (
+            String(post.author) !== actor.id &&
+            !mentionedUserIds.has(String(post.author))
+        ) {
             await this.notifications.sendNotification(String(post.author), {
                 type: 'comment_post',
                 user: actor.id,
@@ -217,6 +240,13 @@ export class CommentsService {
                 comment: String(result._id),
             });
         }
+        await this.mentionNotifications.notifyFromText({
+            actorId: actor.id,
+            text: commentText,
+            postId,
+            commentId: String(result._id),
+            excludeUserIds: [actor.id],
+        });
         await this.logger.log({
             type: 'comment_post',
             message: `User ${actor.nick_name} commented on post ${postId}`,
@@ -308,6 +338,18 @@ export class CommentsService {
                 { returnDocument: 'after', runValidators: true },
             )
             .lean();
+        if (commentText !== undefined) {
+            await this.mentionNotifications.notifyNewMentions(
+                String(comment.comment_text || ''),
+                commentText,
+                {
+                    actorId: actor.id,
+                    postId: String(comment.post_id),
+                    commentId,
+                    excludeUserIds: [actor.id],
+                },
+            );
+        }
         await this.logger.log({
             type: 'update_comment',
             message: `User ${actor.nick_name} edited comment ${commentId}`,
