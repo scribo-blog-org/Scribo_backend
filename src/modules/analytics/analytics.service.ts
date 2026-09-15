@@ -45,18 +45,16 @@ export class AnalyticsService {
         return start;
     }
 
-    private parseDays(value?: string | number) {
-        const days = Number.parseInt(String(value || '14'), 10);
-        return [7, 14, 30].includes(days) ? days : 14;
+    private hoursAgo(hours: number) {
+        return new Date(Date.now() - hours * 60 * 60 * 1000);
     }
 
-    private sanitizePath(path?: string) {
-        const raw = String(path || '')
-            .split('?')[0]
-            .split('#')[0]
-            .trim();
-        if (!raw.startsWith('/')) return '/';
-        return raw.slice(0, 200);
+    private dateRangeFilter(from: Date, to?: Date) {
+        if (to) {
+            return { $gte: from, $lt: to };
+        }
+
+        return { $gte: from };
     }
 
     private dayKeyExpr(field: string) {
@@ -67,6 +65,39 @@ export class AnalyticsService {
                 timezone: 'UTC',
             },
         };
+    }
+
+    private hourKeyExpr(field: string) {
+        return {
+            $dateToString: {
+                format: '%Y-%m-%dT%H',
+                date: `$${field}`,
+                timezone: 'UTC',
+            },
+        };
+    }
+
+    private parsePeriod(value?: string) {
+        if (value === '24h') {
+            return { mode: 'hours' as const, hours: 24, key: '24h' as const };
+        }
+
+        const days = Number.parseInt(String(value || '14'), 10);
+        const normalized = [7, 14, 30].includes(days) ? days : 14;
+        return {
+            mode: 'days' as const,
+            days: normalized,
+            key: normalized,
+        };
+    }
+
+    private sanitizePath(path?: string) {
+        const raw = String(path || '')
+            .split('?')[0]
+            .split('#')[0]
+            .trim();
+        if (!raw.startsWith('/')) return '/';
+        return raw.slice(0, 200);
     }
 
     private toMap(rows: { _id: string; count: number }[]) {
@@ -103,6 +134,27 @@ export class AnalyticsService {
             }
             series.push(point);
         }
+        return series;
+    }
+
+    private fillHours(hours: number, maps: Record<string, Map<string, number>>) {
+        const end = new Date();
+        end.setUTCMinutes(0, 0, 0);
+        const series = [];
+
+        for (let offset = hours - 1; offset >= 0; offset -= 1) {
+            const point = new Date(end);
+            point.setUTCHours(point.getUTCHours() - offset);
+            const key = point.toISOString().slice(0, 13);
+            const item: Record<string, unknown> = { date: key };
+
+            for (const [name, map] of Object.entries(maps)) {
+                item[name] = map.get(key) || 0;
+            }
+
+            series.push(item);
+        }
+
         return series;
     }
 
@@ -176,7 +228,9 @@ export class AnalyticsService {
         }));
     }
 
-    private async periodActivity(from: Date) {
+    private async periodActivity(from: Date, to?: Date) {
+        const dateFilter = this.dateRangeFilter(from, to);
+
         const [
             logRows,
             commentsCreated,
@@ -186,7 +240,7 @@ export class AnalyticsService {
             this.logs.aggregate([
                 {
                     $match: {
-                        date_time: { $gte: from },
+                        date_time: dateFilter,
                         type: {
                             $in: [
                                 'create_post',
@@ -204,9 +258,9 @@ export class AnalyticsService {
                 },
                 { $group: { _id: '$type', count: { $sum: 1 } } },
             ]),
-            this.comments.countDocuments({ created_date: { $gte: from } }),
-            this.sessions.countDocuments({ createdAt: { $gte: from } }),
-            this.users.countDocuments({ created_date: { $gte: from } }),
+            this.comments.countDocuments({ created_date: dateFilter }),
+            this.sessions.countDocuments({ createdAt: dateFilter }),
+            this.users.countDocuments({ created_date: dateFilter }),
         ]);
 
         const counts = new Map(
@@ -248,11 +302,22 @@ export class AnalyticsService {
                 "You don't have permission to view analytics",
             );
         }
-        const days = this.parseDays(query.days);
-        const from = this.rangeStart(days);
-        const previousFrom = this.rangeStart(days * 2);
+
+        const period = this.parsePeriod(query.days);
+        const from =
+            period.mode === 'hours'
+                ? this.hoursAgo(period.hours)
+                : this.rangeStart(period.days);
+        const previousFrom =
+            period.mode === 'hours'
+                ? this.hoursAgo(period.hours * 2)
+                : this.rangeStart(period.days * 2);
         const previousMatch = { created_at: { $gte: previousFrom, $lt: from } };
         const currentMatch = { created_at: { $gte: from } };
+        const bucketExpr =
+            period.mode === 'hours'
+                ? this.hourKeyExpr('created_at')
+                : this.dayKeyExpr('created_at');
         const authorized = (base: object) => ({
             ...base,
             user: { $exists: true, $ne: null },
@@ -287,12 +352,12 @@ export class AnalyticsService {
                 {
                     $group: {
                         _id: {
-                            day: this.dayKeyExpr('created_at'),
+                            bucket: bucketExpr,
                             visitor: '$visitor_id',
                         },
                     },
                 },
-                { $group: { _id: '$_id.day', count: { $sum: 1 } } },
+                { $group: { _id: '$_id.bucket', count: { $sum: 1 } } },
                 { $sort: { _id: 1 } },
             ]),
             this.pageViews.aggregate([
@@ -338,17 +403,21 @@ export class AnalyticsService {
                 : 0,
         };
 
+        const visitorMap = this.toMap(
+            uniqueSeries as { _id: string; count: number }[],
+        );
+        const series =
+            period.mode === 'hours'
+                ? this.fillHours(period.hours, { visitors: visitorMap })
+                : this.fillDays(period.days, { visitors: visitorMap });
+
         return {
-            days,
+            days: period.key,
             totals: {
                 unique_visitors,
                 unique_visitors_prev: previousUnique,
             },
-            series: this.fillDays(days, {
-                visitors: this.toMap(
-                    uniqueSeries as { _id: string; count: number }[],
-                ),
-            }),
+            series,
             activity,
             audience,
             top_paths: this.withPercent(
