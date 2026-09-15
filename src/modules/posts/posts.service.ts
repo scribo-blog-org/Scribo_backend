@@ -21,6 +21,7 @@ import { UsersService } from '../users/users.service';
 import { CommentsService } from './comments.service';
 import { tryConsume } from '../../common/rate-limit.guard';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MentionNotificationsService } from '../notifications/mention-notifications.service';
 
 @Injectable()
 export class PostsService {
@@ -33,6 +34,7 @@ export class PostsService {
         private readonly commentsService: CommentsService,
         private readonly usersService: UsersService,
         private readonly notifications: NotificationsService,
+        private readonly mentionNotifications: MentionNotificationsService,
         private readonly storage: StorageService,
         private readonly logger: LoggerService,
     ) {}
@@ -255,6 +257,11 @@ export class PostsService {
             message: `User ${actor.nick_name} created post`,
             data: { user: actor.id, post: created._id },
         });
+        await this.mentionNotifications.notifyFromText({
+            actorId: actor.id,
+            text: data.postContent,
+            postId: String(created._id),
+        });
         return created.toObject();
     }
 
@@ -332,6 +339,16 @@ export class PostsService {
             message: `User ${actor.nick_name} updated post ${post._id}`,
             data: { user: actor.id, post: result._id },
         });
+        if (data.postContent !== undefined) {
+            await this.mentionNotifications.notifyNewMentions(
+                String(post.content_text || ''),
+                data.postContent,
+                {
+                    actorId: actor.id,
+                    postId: id,
+                },
+            );
+        }
         return result;
     }
 

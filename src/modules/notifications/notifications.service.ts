@@ -26,7 +26,7 @@ export class NotificationsService {
                     },
                 },
             },
-            { returnDocument: 'after' },
+            { returnDocument: 'after', runValidators: true },
         );
 
         if (notificationUpdate) {
