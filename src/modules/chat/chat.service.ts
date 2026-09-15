@@ -2,21 +2,26 @@ import {
     BadRequestException,
     ForbiddenException,
     Injectable,
+    InternalServerErrorException,
     NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import type { Actor } from '../../authz/policy';
 import { FIELD_LIMITS } from '../../common/field-limits';
+import { MailService } from '../../common/mail.service';
 import { ChatMessage } from '../../database/schemas/chat-message.schema';
 import { Conversation } from '../../database/schemas/conversation.schema';
 import { User } from '../../database/schemas/user.schema';
 import { SocketService } from '../../socket/socket.service';
+import { chatStartedEmailTemplate } from './chat-started-email';
 
 type UserLean = {
     _id: Types.ObjectId;
     nick_name: string;
     avatar?: string;
+    email?: string;
 };
 
 type MessageLean = {
@@ -26,6 +31,7 @@ type MessageLean = {
     text: string;
     reply_to?: Types.ObjectId | null;
     deleted_at?: Date | null;
+    edited_at?: Date | null;
     createdAt?: Date;
     created_at?: Date;
 };
@@ -50,6 +56,8 @@ export class ChatService {
         private readonly messages: Model<ChatMessage>,
         @InjectModel(User.name) private readonly users: Model<User>,
         private readonly socketService: SocketService,
+        private readonly mail: MailService,
+        private readonly config: ConfigService,
     ) {}
 
     private participantKey(a: string, b: string) {
@@ -129,6 +137,7 @@ export class ChatService {
             text: message.deleted_at ? '' : message.text,
             reply_to: message.reply_to ? String(message.reply_to) : null,
             deleted_at: message.deleted_at || null,
+            edited_at: message.edited_at || null,
             created_at: createdAt,
             is_own: String(sender?._id) === actor.id,
         };
@@ -247,6 +256,39 @@ export class ChatService {
         }
     }
 
+    private notifyChatStarted(
+        recipient: { email?: string | null; nick_name?: string | null },
+        initiatorNickName: string | null | undefined,
+        conversationId: string,
+    ) {
+        if (!recipient.email) {
+            return;
+        }
+
+        const origin = this.config.get<string>('FRONTEND_ORIGIN');
+        const messagesUrl = origin
+            ? `${String(origin).replace(/\/$/, '')}/messages/${conversationId}`
+            : '';
+
+        if (!messagesUrl) {
+            return;
+        }
+
+        void this.mail
+            .sendEmail({
+                to: recipient.email,
+                subject: 'С вами начали переписку в Scribo',
+                html: chatStartedEmailTemplate({
+                    recipientNickName: recipient.nick_name,
+                    initiatorNickName,
+                    messagesUrl,
+                }),
+            })
+            .catch((error) => {
+                console.error('Failed to send chat started email', error);
+            });
+    }
+
     async getUnreadCount(actor: Actor) {
         return { unread: await this.unreadCountForUser(actor.id) };
     }
@@ -324,6 +366,18 @@ export class ChatService {
                 String(conversation._id),
                 [actor.id, otherUserId],
             );
+
+            const recipient = await this.users
+                .findById(otherUserId)
+                .select('email nick_name')
+                .lean<{ email?: string; nick_name?: string }>();
+            if (recipient) {
+                this.notifyChatStarted(
+                    recipient,
+                    actor.nick_name,
+                    String(conversation._id),
+                );
+            }
         }
 
         return {
@@ -562,6 +616,83 @@ export class ChatService {
         return payload;
     }
 
+    async editMessage(messageId: string, actor: Actor, input: { text: string }) {
+        const message = await this.messages.findById(messageId).lean<MessageLean>();
+        if (!message) {
+            throw new NotFoundException('Message not found');
+        }
+        if (String(message.sender_id) !== actor.id) {
+            throw new ForbiddenException("You can't edit this message");
+        }
+        if (message.deleted_at) {
+            throw new BadRequestException('Deleted messages cannot be edited');
+        }
+
+        const text = String(input.text || '').trim();
+        if (
+            text.length < FIELD_LIMITS.chatMessage.min ||
+            text.length > FIELD_LIMITS.chatMessage.max
+        ) {
+            throw new BadRequestException('Invalid message text');
+        }
+        if (text === message.text) {
+            throw new BadRequestException('Message text is unchanged');
+        }
+
+        const conversation = await this.getConversationForActor(
+            String(message.conversation_id),
+            actor,
+        );
+
+        const editedAt = new Date();
+        await this.messages.findByIdAndUpdate(messageId, {
+            $set: { text, edited_at: editedAt },
+        });
+
+        const conversationUpdate: Record<string, unknown> = {};
+        if (String(conversation.last_message_id) === messageId) {
+            conversationUpdate.last_message_text = text;
+        }
+        if (Object.keys(conversationUpdate).length) {
+            await this.conversations.findByIdAndUpdate(
+                conversation._id,
+                { $set: conversationUpdate },
+            );
+        }
+
+        const updated = await this.messages
+            .findById(messageId)
+            .populate('sender_id', '_id nick_name avatar')
+            .lean<MessageLean>();
+
+        if (!updated) {
+            throw new NotFoundException('Message not found');
+        }
+
+        const payload = {
+            ...this.serializeMessage(updated, actor),
+            status: 'sent',
+            reply_preview: updated.reply_to
+                ? await this.buildReplyPreview(updated.reply_to as Types.ObjectId)
+                : null,
+        };
+
+        this.socketService.chatMessage(
+            String(message.conversation_id),
+            payload,
+            this.participantIds(conversation),
+        );
+
+        if (Object.keys(conversationUpdate).length) {
+            await this.pushConversationUpdate(
+                String(conversation._id),
+                this.participantIds(conversation),
+            );
+        }
+
+        return payload;
+    }
+
     async markRead(conversationId: string, actor: Actor) {
         const conversation = await this.getConversationForActor(
             conversationId,
@@ -596,5 +727,33 @@ export class ChatService {
         );
 
         return { read_at: now };
+    }
+
+    async deleteConversation(conversationId: string, actor: Actor) {
+        const conversation = await this.getConversationForActor(
+            conversationId,
+            actor,
+        );
+        const participantIds = this.participantIds(conversation);
+
+        try {
+            await this.socketService.removeConversationMembers(conversationId);
+        } catch {
+            throw new InternalServerErrorException(
+                'Failed to remove conversation access',
+            );
+        }
+
+        await this.messages.deleteMany({
+            conversation_id: conversation._id,
+        });
+        await this.conversations.findByIdAndDelete(conversation._id);
+
+        for (const userId of participantIds) {
+            this.socketService.chatConversationDeleted(userId, conversationId);
+            await this.pushUnread(userId);
+        }
+
+        return { _id: conversationId };
     }
 }

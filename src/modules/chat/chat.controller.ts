@@ -4,6 +4,7 @@ import {
     Delete,
     Get,
     Param,
+    Patch,
     Post,
     Query,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import type { Actor } from '../../authz/policy';
 import { ChatService } from './chat.service';
 import {
     CreateConversationDto,
+    EditMessageDto,
     ListMessagesQueryDto,
     SendMessageDto,
 } from './dto/chat.dto';
@@ -53,6 +55,15 @@ export class ChatController {
         return { status: true, message: 'Conversation fetched', data };
     }
 
+    @Delete('conversations/:id')
+    async deleteConversation(
+        @Param('id') id: string,
+        @CurrentUser() actor: Actor,
+    ) {
+        const data = await this.chat.deleteConversation(id, actor);
+        return { status: true, message: 'Conversation deleted', data };
+    }
+
     @Get('conversations/:id/messages')
     async listMessages(
         @Param('id') id: string,
@@ -89,5 +100,15 @@ export class ChatController {
     ) {
         const data = await this.chat.deleteMessage(id, actor);
         return { status: true, message: 'Message deleted', data };
+    }
+
+    @Patch('messages/:id')
+    async editMessage(
+        @Param('id') id: string,
+        @Body() dto: EditMessageDto,
+        @CurrentUser() actor: Actor,
+    ) {
+        const data = await this.chat.editMessage(id, actor, { text: dto.text });
+        return { status: true, message: 'Message edited', data };
     }
 }

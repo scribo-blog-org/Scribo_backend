@@ -21,6 +21,14 @@ export class SendMessageDto {
     replyTo?: string;
 }
 
+export class EditMessageDto {
+    @ApiProperty()
+    @IsString()
+    @MinLength(FIELD_LIMITS.chatMessage.min)
+    @MaxLength(FIELD_LIMITS.chatMessage.max)
+    text!: string;
+}
+
 export class ListMessagesQueryDto {
     @ApiPropertyOptional()
     @IsOptional()

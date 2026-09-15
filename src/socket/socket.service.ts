@@ -98,4 +98,34 @@ export class SocketService {
                 );
             });
     }
+
+    async removeConversationMembers(conversationId: string): Promise<void> {
+        const { error } = await this.socketClient.client
+            .from('conversation_members')
+            .delete()
+            .eq('conversation_id', conversationId);
+
+        if (error) {
+            this.logger.error(
+                `Failed to remove conversation members for ${conversationId}`,
+                error,
+            );
+            throw error;
+        }
+
+        this.logger.log(
+            `Removed conversation members for ${conversationId}`,
+        );
+    }
+
+    chatConversationDeleted(userId: string, conversationId: string): void {
+        void this.socketEvents
+            .chatConversationDeleted(userId, conversationId)
+            .catch((error: unknown) => {
+                this.logger.error(
+                    `Failed to send chat deletion to user ${userId}`,
+                    error instanceof Error ? error.stack : error,
+                );
+            });
+    }
 }

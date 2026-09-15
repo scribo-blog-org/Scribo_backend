@@ -24,6 +24,9 @@ export class ChatMessage {
 
     @Prop({ type: Date, default: null })
     deleted_at?: Date | null;
+
+    @Prop({ type: Date, default: null })
+    edited_at?: Date | null;
 }
 
 export const ChatMessageSchema = SchemaFactory.createForClass(ChatMessage);
