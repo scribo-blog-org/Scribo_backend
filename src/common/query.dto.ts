@@ -134,7 +134,7 @@ export class DashboardQueryDto {
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
-    @IsIn(['7', '14', '30'])
+    @IsIn(['24h', '7', '14', '30'])
     days?: string;
 }
 
