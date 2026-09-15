@@ -64,4 +64,13 @@ export class SocketEvents {
             conversation,
         });
     }
+
+    async chatConversationDeleted(
+        userId: string,
+        conversationId: string,
+    ): Promise<void> {
+        await this.broadcast(`user:${userId}`, 'chat:conversation-deleted', {
+            conversation_id: conversationId,
+        });
+    }
 }
