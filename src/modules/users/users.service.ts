@@ -23,6 +23,8 @@ type UserLean = {
     email: string;
     password?: string;
     role: Role;
+    avatar?: string;
+    is_verified?: boolean;
     is_saved_posts_public?: boolean;
     is_last_activity_public?: boolean;
     last_activity_at?: Date;
@@ -41,6 +43,24 @@ export class UsersService implements OnModuleInit {
         private readonly notificationsService: NotificationsService,
     ) {}
 
+    touchLastActivity(userId: string) {
+        if (!userId || !Types.ObjectId.isValid(userId)) {
+            return;
+        }
+        if (!tryConsume(`last-activity:${userId}`, 10_000, 1)) {
+            return;
+        }
+
+        setImmediate(() => {
+            void this.users.collection
+                .updateOne(
+                    { _id: new Types.ObjectId(userId) },
+                    { $set: { last_activity_at: new Date() } },
+                )
+                .catch(() => undefined);
+        });
+    }
+
     async onModuleInit() {
         await this.users.collection.updateMany(
             {
@@ -55,24 +75,6 @@ export class UsersService implements OnModuleInit {
             { is_last_activity_public: { $exists: false } },
             { $set: { is_last_activity_public: true } },
         );
-    }
-
-    touchLastActivity(userId: string) {
-        if (!userId || !Types.ObjectId.isValid(userId)) {
-            return;
-        }
-        if (!tryConsume(`last-activity:${userId}`, 30_000, 1)) {
-            return;
-        }
-
-        setImmediate(() => {
-            void this.users.collection
-                .updateOne(
-                    { _id: new Types.ObjectId(userId) },
-                    { $set: { last_activity_at: new Date() } },
-                )
-                .catch(() => undefined);
-        });
     }
 
     sanitize(

@@ -20,7 +20,6 @@ import { SearchModule } from './modules/search/search.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { LinkPreviewModule } from './modules/link-preview/link-preview.module';
-
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),

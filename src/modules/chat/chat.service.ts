@@ -15,6 +15,7 @@ import { ChatMessage } from '../../database/schemas/chat-message.schema';
 import { Conversation } from '../../database/schemas/conversation.schema';
 import { User } from '../../database/schemas/user.schema';
 import { SocketService } from '../../socket/socket.service';
+import { UsersService } from '../users/users.service';
 import { chatStartedEmailTemplate } from './chat-started-email';
 
 type UserLean = {
@@ -22,6 +23,9 @@ type UserLean = {
     nick_name: string;
     avatar?: string;
     email?: string;
+    is_verified?: boolean;
+    last_activity_at?: Date;
+    is_last_activity_public?: boolean;
 };
 
 type MessageLean = {
@@ -55,6 +59,7 @@ export class ChatService {
         @InjectModel(ChatMessage.name)
         private readonly messages: Model<ChatMessage>,
         @InjectModel(User.name) private readonly users: Model<User>,
+        private readonly usersService: UsersService,
         private readonly socketService: SocketService,
         private readonly mail: MailService,
         private readonly config: ConfigService,
@@ -120,6 +125,24 @@ export class ChatService {
             _id: String(user._id),
             nick_name: user.nick_name,
             avatar: user.avatar || null,
+        };
+    }
+
+    private async serializeParticipant(otherId: string, viewerId: string) {
+        const user = await this.usersService.getById(otherId, {
+            viewerId,
+        });
+        if (!user) {
+            return null;
+        }
+
+        return {
+            _id: String(user._id),
+            nick_name: user.nick_name,
+            avatar: user.avatar || null,
+            is_verified: Boolean(user.is_verified),
+            last_activity_at: user.last_activity_at || null,
+            is_last_activity_public: user.is_last_activity_public,
         };
     }
 
@@ -203,22 +226,13 @@ export class ChatService {
     private async serializeConversationListItem(
         row: ConversationLean,
         userId: string,
-        participant?: UserLean | null,
     ) {
         const otherId = this.otherParticipantId(row, userId);
-        let other = participant;
-        if (!other) {
-            other = await this.users
-                .findById(otherId)
-                .select('_id nick_name avatar')
-                .lean<UserLean>();
-        }
-
         const unread = await this.unreadForConversation(row, userId);
 
         return {
             _id: String(row._id),
-            participant: this.serializeUser(other || null),
+            participant: await this.serializeParticipant(otherId, userId),
             last_message_text: row.last_message_text,
             last_message_at: row.last_message_at,
             unread,
@@ -236,21 +250,10 @@ export class ChatService {
             return;
         }
 
-        const otherIds = userIds.map((userId) =>
-            this.otherParticipantId(conversation, userId),
-        );
-        const users = await this.users
-            .find({ _id: { $in: otherIds } })
-            .select('_id nick_name avatar')
-            .lean<UserLean[]>();
-        const userMap = new Map(users.map((user) => [String(user._id), user]));
-
         for (const userId of userIds) {
-            const otherId = this.otherParticipantId(conversation, userId);
             const item = await this.serializeConversationListItem(
                 conversation,
                 userId,
-                userMap.get(otherId) || null,
             );
             this.socketService.chatConversation(userId, item);
         }
@@ -299,25 +302,10 @@ export class ChatService {
             .sort({ last_message_at: -1, updatedAt: -1 })
             .lean<ConversationLean[]>();
 
-        const otherIds = rows
-            .map((row) => this.otherParticipantId(row, actor.id))
-            .filter(Boolean);
-
-        const users = await this.users
-            .find({ _id: { $in: otherIds } })
-            .select('_id nick_name avatar')
-            .lean<UserLean[]>();
-        const userMap = new Map(users.map((user) => [String(user._id), user]));
-
         const items = await Promise.all(
-            rows.map((row) => {
-                const otherId = this.otherParticipantId(row, actor.id);
-                return this.serializeConversationListItem(
-                    row,
-                    actor.id,
-                    userMap.get(otherId) || null,
-                );
-            }),
+            rows.map((row) =>
+                this.serializeConversationListItem(row, actor.id),
+            ),
         );
 
         return items;
@@ -382,21 +370,17 @@ export class ChatService {
 
         return {
             _id: String(conversation._id),
-            participant: this.serializeUser(other),
+            participant: await this.serializeParticipant(otherUserId, actor.id),
         };
     }
 
     async getConversation(id: string, actor: Actor) {
         const conversation = await this.getConversationForActor(id, actor);
         const otherId = this.otherParticipantId(conversation, actor.id);
-        const other = await this.users
-            .findById(otherId)
-            .select('_id nick_name avatar')
-            .lean<UserLean>();
 
         return {
             _id: String(conversation._id),
-            participant: this.serializeUser(other),
+            participant: await this.serializeParticipant(otherId, actor.id),
             last_read_at: conversation.last_read_at || {},
         };
     }

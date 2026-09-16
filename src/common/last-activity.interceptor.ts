@@ -7,7 +7,6 @@ import {
 import type { Request } from 'express';
 import type { Observable } from 'rxjs';
 import type { Actor } from '../authz/policy';
-import { getRefreshCookies } from '../modules/auth/auth.cookies';
 import { TokenService } from '../modules/auth/token.service';
 import { UsersService } from '../modules/users/users.service';
 
@@ -42,16 +41,7 @@ export class LastActivityInterceptor implements NestInterceptor {
         const header = request.headers.authorization;
         if (typeof header === 'string' && header.startsWith('Bearer ')) {
             const id = this.tokens.identifyAccess(header.slice(7));
-            if (id) {
-                return id;
-            }
-        }
-
-        for (const token of getRefreshCookies(request.headers.cookie)) {
-            const payload = this.tokens.decodeRefresh(token);
-            if (payload?.id) {
-                return String(payload.id);
-            }
+            return id || null;
         }
 
         return null;
