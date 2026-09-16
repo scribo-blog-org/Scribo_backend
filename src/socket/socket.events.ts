@@ -13,10 +13,11 @@ export class SocketEvents {
         room: string,
         event: string,
         payload: unknown,
+        options: { private?: boolean } = { private: true },
     ): Promise<void> {
         const channel = this.socketClient.client.channel(room, {
             config: {
-                private: true,
+                private: options.private !== false,
             },
         });
 
@@ -73,4 +74,5 @@ export class SocketEvents {
             conversation_id: conversationId,
         });
     }
+
 }

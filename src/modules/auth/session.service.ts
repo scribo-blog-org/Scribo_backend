@@ -143,7 +143,6 @@ export class SessionService implements OnModuleInit {
         }
 
         this.notifyLogin(user, { device, location, ip });
-        this.users.touchLastActivity(String(user._id));
 
         return {
             accessToken: this.tokens.encodeAccess(user, String(sessionId)),
@@ -216,7 +215,6 @@ export class SessionService implements OnModuleInit {
                 patch.ip = geo.ip || session.ip;
             }
             await this.sessions.findByIdAndUpdate(session._id, patch);
-            this.users.touchLastActivity(String(user._id));
 
             return {
                 accessToken: this.tokens.encodeAccess(
