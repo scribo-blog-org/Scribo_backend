@@ -18,6 +18,7 @@ function cookieOptions(req?: Request) {
         sameSite: (secure ? 'none' : 'lax') as 'none' | 'lax',
         path: '/',
         maxAge: MAX_AGE_MS,
+        ...(secure ? { partitioned: true as const } : {}),
     };
 }
 
