@@ -19,52 +19,12 @@ export class LoginUsernameDto {
     @IsString()
     @IsPassword()
     userPassword!: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    city?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    region?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    country?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    ip?: string;
 }
 
 export class LoginGoogleDto {
     @ApiProperty()
     @IsString()
     googleToken!: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    city?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    region?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    country?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    ip?: string;
 }
 
 export class AccessTokenDataDto {

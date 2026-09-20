@@ -211,23 +211,6 @@ export class AnalyticsService {
         return created.toObject();
     }
 
-    private withPercent<T extends Record<string, unknown>>(
-        items: T[],
-        valueKey: keyof T,
-    ) {
-        const total = items.reduce(
-            (sum, item) => sum + Number(item[valueKey] || 0),
-            0,
-        );
-
-        return items.map((item) => ({
-            ...item,
-            percent: total
-                ? Math.round((Number(item[valueKey] || 0) / total) * 100)
-                : 0,
-        }));
-    }
-
     private async periodActivity(from: Date, to?: Date) {
         const dateFilter = this.dateRangeFilter(from, to);
 
@@ -327,37 +310,44 @@ export class AnalyticsService {
             $or: [{ user: { $exists: false } }, { user: null }],
         });
 
+        const ipMatch = (base: object) => ({
+            ...base,
+            ip: { $nin: [null, ''] },
+        });
+
         const [
+            visits,
+            previousVisits,
             unique_visitors,
             previousUnique,
             authorized_visits,
             anonymous_visits,
-            uniqueSeries,
+            visitSeries,
             paths,
+            cities,
             searchInsights,
             contentTags,
             topPosts,
             activity,
         ] = await Promise.all([
+            this.pageViews.countDocuments(currentMatch),
+            this.pageViews.countDocuments(previousMatch),
             this.pageViews
-                .distinct('visitor_id', currentMatch)
+                .distinct('ip', ipMatch(currentMatch))
                 .then((rows) => rows.filter(Boolean).length),
             this.pageViews
-                .distinct('visitor_id', previousMatch)
+                .distinct('ip', ipMatch(previousMatch))
                 .then((rows) => rows.filter(Boolean).length),
             this.pageViews.countDocuments(authorized(currentMatch)),
             this.pageViews.countDocuments(anonymous(currentMatch)),
             this.pageViews.aggregate([
-                { $match: { created_at: { $gte: from } } },
+                { $match: currentMatch },
                 {
                     $group: {
-                        _id: {
-                            bucket: bucketExpr,
-                            visitor: '$visitor_id',
-                        },
+                        _id: bucketExpr,
+                        count: { $sum: 1 },
                     },
                 },
-                { $group: { _id: '$_id.bucket', count: { $sum: 1 } } },
                 { $sort: { _id: 1 } },
             ]),
             this.pageViews.aggregate([
@@ -366,7 +356,15 @@ export class AnalyticsService {
                     $group: {
                         _id: '$path',
                         visits: { $sum: 1 },
-                        unique_visitors: { $addToSet: '$visitor_id' },
+                        unique_visitors: {
+                            $addToSet: {
+                                $cond: [
+                                    { $gt: ['$ip', ''] },
+                                    '$ip',
+                                    '$$REMOVE',
+                                ],
+                            },
+                        },
                     },
                 },
                 {
@@ -380,6 +378,46 @@ export class AnalyticsService {
                 { $sort: { visits: -1 } },
                 { $limit: 5 },
             ]),
+            this.pageViews.aggregate([
+                { $match: ipMatch(currentMatch) },
+                {
+                    $group: {
+                        _id: '$ip',
+                        city: { $last: '$city' },
+                        country: { $last: '$country' },
+                    },
+                },
+                {
+                    $group: {
+                        _id: {
+                            city: {
+                                $cond: [
+                                    {
+                                        $gt: [
+                                            { $ifNull: ['$city', ''] },
+                                            '',
+                                        ],
+                                    },
+                                    '$city',
+                                    'Неизвестно',
+                                ],
+                            },
+                            country: { $ifNull: ['$country', ''] },
+                        },
+                        unique_visitors: { $sum: 1 },
+                    },
+                },
+                { $sort: { unique_visitors: -1 } },
+                { $limit: 8 },
+                {
+                    $project: {
+                        city: '$_id.city',
+                        country: '$_id.country',
+                        unique_visitors: 1,
+                        _id: 0,
+                    },
+                },
+            ]),
             this.searchInsights(from, previousFrom),
             this.contentHashtags(5),
             this.posts
@@ -391,39 +429,53 @@ export class AnalyticsService {
             this.periodActivity(from),
         ]);
 
-        const visitTotal = authorized_visits + anonymous_visits;
         const audience = {
             authorized_visits,
             anonymous_visits,
-            authorized_percent: visitTotal
-                ? Math.round((authorized_visits / visitTotal) * 100)
-                : 0,
-            anonymous_percent: visitTotal
-                ? Math.round((anonymous_visits / visitTotal) * 100)
-                : 0,
         };
 
-        const visitorMap = this.toMap(
-            uniqueSeries as { _id: string; count: number }[],
+        const visitMap = this.toMap(
+            visitSeries as { _id: string; count: number }[],
         );
         const series =
             period.mode === 'hours'
-                ? this.fillHours(period.hours, { visitors: visitorMap })
-                : this.fillDays(period.days, { visitors: visitorMap });
+                ? this.fillHours(period.hours, {
+                      visits: visitMap,
+                  })
+                : this.fillDays(period.days, {
+                      visits: visitMap,
+                  });
 
         return {
             days: period.key,
             totals: {
+                visits,
+                visits_prev: previousVisits,
                 unique_visitors,
                 unique_visitors_prev: previousUnique,
             },
             series,
             activity,
             audience,
-            top_paths: this.withPercent(
-                paths as Array<{ path: string; visits: number }>,
-                'visits',
-            ),
+            top_paths: paths as Array<{ path: string; visits: number }>,
+            top_cities: (
+                cities as Array<{
+                    city: string;
+                    country?: string;
+                    unique_visitors: number;
+                }>
+            ).map((row) => ({
+                city: row.city,
+                country: row.country || '',
+                unique_visitors: Number(row.unique_visitors || 0),
+                percent: unique_visitors
+                    ? Math.round(
+                          (Number(row.unique_visitors || 0) /
+                              unique_visitors) *
+                              100,
+                      )
+                    : 0,
+            })),
             top_posts: (
                 topPosts as Array<{
                     _id: unknown;
@@ -435,22 +487,16 @@ export class AnalyticsService {
                 title: post.title,
                 views_count: Number(post.views_count || 0),
             })),
-            top_queries: this.withPercent(
-                searchInsights.top_queries as Array<{
-                    query: string;
-                    count: number;
-                }>,
-                'count',
-            ),
-            top_hashtags: this.withPercent(
-                contentTags.top as Array<{
-                    tag: string;
-                    uses: number;
-                    posts: number;
-                    comments: number;
-                }>,
-                'uses',
-            ),
+            top_queries: searchInsights.top_queries as Array<{
+                query: string;
+                count: number;
+            }>,
+            top_hashtags: contentTags.top as Array<{
+                tag: string;
+                uses: number;
+                posts: number;
+                comments: number;
+            }>,
         };
     }
 

@@ -49,7 +49,6 @@ export class AuthService {
         userName: string,
         password: string,
         req: Request,
-        body?: object,
     ) {
         const user = await this.users.getByQuery(
             {
@@ -75,14 +74,10 @@ export class AuthService {
         }
 
         const { password: _password, ...safeUser } = user;
-        return this.sessions.issueSession(
-            safeUser as never,
-            req,
-            body as Record<string, string> | undefined,
-        );
+        return this.sessions.issueSession(safeUser as never, req);
     }
 
-    async loginByGoogle(googleToken: string, req: Request, body?: object) {
+    async loginByGoogle(googleToken: string, req: Request) {
         const email = await this.emailFromGoogleToken(googleToken);
         if (!email) {
             throw this.invalidGoogleToken(googleToken);
@@ -91,10 +86,6 @@ export class AuthService {
         if (!user) {
             throw new NotFoundException('User with this email is not found');
         }
-        return this.sessions.issueSession(
-            user as never,
-            req,
-            body as Record<string, string> | undefined,
-        );
+        return this.sessions.issueSession(user as never, req);
     }
 }
