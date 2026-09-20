@@ -14,6 +14,7 @@ import { LoggerService } from '../../common/logger.service';
 import { parsePagination } from '../../common/pagination';
 import type { ListPostsQueryDto } from '../../common/query.dto';
 import { fieldError } from '../../common/http-errors';
+import { isMongoObjectId } from '../../common/mongo-id';
 import { Category } from '../../database/schemas/category.schema';
 import { Post } from '../../database/schemas/post.schema';
 import { PostComment } from '../../database/schemas/post-comment.schema';
@@ -39,15 +40,21 @@ export class PostsService {
         private readonly logger: LoggerService,
     ) {}
 
-    private objectId(value?: string | string[]) {
+    private objectId(value?: string | string[], field = 'id') {
         if (value == null || value === '') return undefined;
         const ids = (Array.isArray(value) ? value : [value])
             .flatMap((item) => String(item).split(','))
             .map((item) => item.trim())
             .filter(Boolean);
         if (!ids.length) return undefined;
-        if (ids.length === 1) return new Types.ObjectId(ids[0]);
-        return { $in: ids.map((id) => new Types.ObjectId(id)) };
+        const parsed = ids.map((id) => {
+            if (!isMongoObjectId(id)) {
+                throw fieldError(field, 'Incorrect type!', id);
+            }
+            return new Types.ObjectId(id);
+        });
+        if (parsed.length === 1) return parsed[0];
+        return { $in: parsed };
     }
 
     private assertOwnerOrPermission(
@@ -76,8 +83,8 @@ export class PostsService {
     }> {
         const { page, limit, skip } = parsePagination(query, 5, 50);
         const filter: Record<string, unknown> = {};
-        const author = this.objectId(query.author);
-        const category = this.objectId(query.category);
+        const author = this.objectId(query.author, 'author');
+        const category = this.objectId(query.category, 'category');
         if (author) filter.author = author;
         if (category) filter.category = category;
         if (query._id || query.ids || query.id) {
@@ -88,7 +95,7 @@ export class PostsService {
                     pagination: { page, limit, total: 0, pages: 0 },
                 };
             }
-            filter._id = this.objectId(idsValue);
+            filter._id = this.objectId(idsValue, 'id');
         }
 
         const total = await this.posts.countDocuments(filter);

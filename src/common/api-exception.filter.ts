@@ -6,6 +6,7 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Error as MongooseError } from 'mongoose';
 import { MulterError } from 'multer';
 import {
     bagFromField,
@@ -20,6 +21,20 @@ export class ApiExceptionFilter implements ExceptionFilter {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
         const request = ctx.getRequest<Request>();
+
+        if (exception instanceof MongooseError.CastError) {
+            const field =
+                exception.path === '_id' ? 'id' : exception.path || 'id';
+            const message = 'Incorrect type!';
+            const source = sourceFromRequest(request, field);
+            response.status(HttpStatus.BAD_REQUEST).json({
+                status: false,
+                message,
+                data: null,
+                errors: bagFromField(source, field, message, exception.value),
+            });
+            return;
+        }
 
         if (exception instanceof MulterError) {
             const field = exception.field || 'file';
