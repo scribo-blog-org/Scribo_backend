@@ -110,9 +110,8 @@ export class SessionService implements OnModuleInit {
             nick_name: string;
         },
         req: Request,
-        body?: Record<string, unknown>,
     ) {
-        const geo = await lookupVisitorGeo(req, body);
+        const geo = await lookupVisitorGeo(req);
         const ip = geo.ip || clientIp(req);
         const device = parseDevice(String(req.headers['user-agent'] || ''));
         const location = formatLocation(geo, 'Unknown');
@@ -175,7 +174,7 @@ export class SessionService implements OnModuleInit {
         }
     }
 
-    async refreshSession(req: Request, body?: Record<string, unknown>) {
+    async refreshSession(req: Request) {
         await this.sessions.deleteMany({ expiresAt: { $lte: new Date() } });
         const tokens = getRefreshCookies(req.headers.cookie);
         if (!tokens.length) {
@@ -208,7 +207,7 @@ export class SessionService implements OnModuleInit {
                 lastError = 'User is not found';
                 continue;
             }
-            const geo = await lookupVisitorGeo(req, body);
+            const geo = await lookupVisitorGeo(req);
             const patch: Record<string, unknown> = { lastSeen: new Date() };
             if (geo.city || geo.country) {
                 patch.location = formatLocation(geo, session.location);

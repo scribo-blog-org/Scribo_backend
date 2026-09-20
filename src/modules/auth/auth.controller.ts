@@ -178,7 +178,6 @@ export class AuthController {
             dto.userName,
             dto.userPassword,
             req,
-            dto,
         );
         setRefreshCookie(res, tokens.refreshToken, req);
         return {
@@ -199,11 +198,7 @@ export class AuthController {
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const tokens = await this.auth.loginByGoogle(
-            dto.googleToken,
-            req,
-            dto,
-        );
+        const tokens = await this.auth.loginByGoogle(dto.googleToken, req);
         setRefreshCookie(res, tokens.refreshToken, req);
         return {
             status: true,
@@ -220,9 +215,8 @@ export class AuthController {
     async refresh(
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
-        @Body() body: Record<string, unknown>,
     ) {
-        const tokens = await this.sessions.refreshSession(req, body);
+        const tokens = await this.sessions.refreshSession(req);
         setRefreshCookie(res, tokens.refreshToken, req);
 
         return {

@@ -59,13 +59,6 @@ export function clientIp(req: {
     );
 }
 
-function sanitizePlace(value: unknown) {
-    return String(value || '')
-        .replace(/[<>]/g, '')
-        .trim()
-        .slice(0, 80);
-}
-
 export function formatLocation(
     geo: { city?: string; country?: string } | null | undefined,
     fallback: string,
@@ -77,50 +70,30 @@ export function formatLocation(
     return fallback;
 }
 
-export async function lookupVisitorGeo(
-    req: {
-        headers?: Record<string, unknown>;
-        ip?: string;
-        socket?: { remoteAddress?: string };
-    },
-    body?: { city?: string; region?: string; country?: string; ip?: string },
-) {
+export async function lookupVisitorGeo(req: {
+    headers?: Record<string, unknown>;
+    ip?: string;
+    socket?: { remoteAddress?: string };
+}) {
     const ip = clientIp(req);
-    const city = sanitizePlace(body?.city);
-    const country = sanitizePlace(body?.country);
-    const region = sanitizePlace(body?.region);
-    const hintIp = normalizeIp(body?.ip);
-
-    if (city || country) {
-        return {
-            ip: isPrivateIp(hintIp) ? ip : hintIp || ip,
-            city,
-            region,
-            country,
-        };
-    }
-
-    const address = !isPrivateIp(ip) ? ip : !isPrivateIp(hintIp) ? hintIp : ip;
-    const cacheKey = isPrivateIp(address)
-        ? `private:${address || 'none'}`
-        : address;
+    const cacheKey = isPrivateIp(ip) ? `private:${ip || 'none'}` : ip;
 
     if (geoCache.has(cacheKey)) {
         return {
             ...geoCache.get(cacheKey)!,
-            ip: address || geoCache.get(cacheKey)!.ip,
+            ip: ip || geoCache.get(cacheKey)!.ip,
         };
     }
 
-    if (isPrivateIp(address)) {
-        const empty = { ip: address, city: '', region: '', country: '' };
+    if (isPrivateIp(ip)) {
+        const empty = { ip, city: '', region: '', country: '' };
         geoCache.set(cacheKey, empty);
         return empty;
     }
 
     try {
         const response = await fetch(
-            `https://ipwho.is/${encodeURIComponent(address)}`,
+            `https://ipwho.is/${encodeURIComponent(ip)}`,
             {
                 signal: AbortSignal.timeout(2000),
                 headers: { 'User-Agent': 'scribo-session' },
@@ -135,7 +108,7 @@ export async function lookupVisitorGeo(
         };
         if (data?.success) {
             const result = {
-                ip: address || data.ip || '',
+                ip: ip || data.ip || '',
                 city: data.city || '',
                 region: data.region || '',
                 country: data.country || '',
@@ -147,7 +120,7 @@ export async function lookupVisitorGeo(
         // fallback
     }
 
-    const fallback = { ip: address, city: '', region: '', country: '' };
+    const fallback = { ip, city: '', region: '', country: '' };
     geoCache.set(cacheKey, fallback);
     return fallback;
 }
